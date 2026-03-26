@@ -38,7 +38,36 @@ function applyUserToUI(user) {
                    ? user.municipio + ", " + user.estado
                    : "México";
   window._user = { name, initials, location, bizName: name, bizCat: "General" };
+  window._currentUser = user; // Guardar referencia completa
   if (typeof syncProfiles === "function") syncProfiles();
+
+  // Aplicar foto si existe — con delay para asegurar que el DOM esté listo
+  if (user.foto_url) {
+    setTimeout(() => loadUserPhoto(user.foto_url), 300);
+  }
+}
+
+function loadUserPhoto(url) {
+  if (!url) return;
+  // Avatar pequeño en header comprador
+  const av = document.getElementById('buyer-av');
+  if (av) av.innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;border-radius:99px;">';
+
+  // Avatar pequeño en header proveedor
+  const pavInitials = document.getElementById('prov-av-initials') || document.getElementById('prov-avatar-circle');
+  if (pavInitials) pavInitials.innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;border-radius:99px;">';
+
+  // Foto grande en editar perfil comprador
+  const profImg = document.getElementById('profile-img-preview');
+  if (profImg) { profImg.src = url; profImg.style.display = 'block'; }
+  const profInitials = document.getElementById('profile-initials');
+  if (profInitials) profInitials.style.display = 'none';
+
+  // Foto grande en editar perfil proveedor
+  const provImg = document.getElementById('prov-img-preview');
+  if (provImg) { provImg.src = url; provImg.style.display = 'block'; }
+  const provInitials = document.getElementById('prov-initials');
+  if (provInitials) provInitials.style.display = 'none';
 }
 
 // ── SESIÓN PERSISTENTE ───────────────────────────────────
@@ -48,30 +77,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const user = await apiCall("GET", "/auth/me", null, token);
     applyUserToUI(user);
-
-    // Cargar foto de perfil si existe
-    if (user.foto_url) {
-      const imgs = ['profile-img-preview', 'prov-img-preview'];
-      imgs.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) { el.src = user.foto_url; el.style.display = 'block'; }
-      });
-      // Ocultar iniciales si hay foto
-      ['profile-initials','prov-initials'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
-      });
-      // Avatar en header
-      const av = document.getElementById('buyer-av');
-      if (av) {
-        av.innerHTML = '<img src="' + user.foto_url + '" style="width:100%;height:100%;object-fit:cover;border-radius:99px;">';
-      }
-    }
-
     window._onboardingDone = true;
     const active = document.querySelector(".screen.active");
     if (active && (active.id === "s-splash" || active.id === "s-auth")) {
-      if (typeof goToHome === "function") goToHome();
+      if (typeof goToHome === "function") {
+        goToHome();
+        // Cargar foto DESPUÉS de navegar al home
+        if (user.foto_url) setTimeout(() => loadUserPhoto(user.foto_url), 500);
+      }
+    } else {
+      // Ya estamos en home, cargar foto directo
+      if (user.foto_url) setTimeout(() => loadUserPhoto(user.foto_url), 300);
     }
   } catch (e) {
     localStorage.removeItem("ven_ya_token");
