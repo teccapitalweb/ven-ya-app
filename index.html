@@ -42,13 +42,32 @@ function applyUserToUI(user) {
 }
 
 // ── SESIÓN PERSISTENTE ───────────────────────────────────
-// Al cargar la página verifica si hay token guardado
 document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("ven_ya_token");
   if (!token) return;
   try {
     const user = await apiCall("GET", "/auth/me", null, token);
     applyUserToUI(user);
+
+    // Cargar foto de perfil si existe
+    if (user.foto_url) {
+      const imgs = ['profile-img-preview', 'prov-img-preview'];
+      imgs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.src = user.foto_url; el.style.display = 'block'; }
+      });
+      // Ocultar iniciales si hay foto
+      ['profile-initials','prov-initials'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+      // Avatar en header
+      const av = document.getElementById('buyer-av');
+      if (av) {
+        av.innerHTML = '<img src="' + user.foto_url + '" style="width:100%;height:100%;object-fit:cover;border-radius:99px;">';
+      }
+    }
+
     window._onboardingDone = true;
     const active = document.querySelector(".screen.active");
     if (active && (active.id === "s-splash" || active.id === "s-auth")) {
