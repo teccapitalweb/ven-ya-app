@@ -259,6 +259,22 @@ window.guardarNuevaPassword = async function() {
   }
 };
 
+// ── HELPER: subir foto a Cloudinary vía backend ──────────
+window.uploadPhoto = async function(file, carpeta) {
+  const formData = new FormData();
+  formData.append('foto', file);
+  formData.append('carpeta', carpeta || 'general');
+  const token = localStorage.getItem('ven_ya_token');
+  const res = await fetch('https://ven-ya-backend-production.up.railway.app/api/subir-foto', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token },
+    body: formData
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Error al subir foto');
+  return data.url;
+};
+
 // ── HELPER: obtener token ────────────────────────────────
 window.getToken = function() {
   return localStorage.getItem("ven_ya_token");
@@ -3507,6 +3523,7 @@ function goTo(from, to) {
 
 function previewPhoto(input) {
   if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
   const reader = new FileReader();
   reader.onload = e => {
     document.getElementById('profile-initials').style.display = 'none';
@@ -3514,11 +3531,16 @@ function previewPhoto(input) {
     img.src = e.target.result;
     img.style.display = 'block';
   };
-  reader.readAsDataURL(input.files[0]);
+  reader.readAsDataURL(file);
+  // Subir a Cloudinary en segundo plano
+  uploadPhoto(file, 'perfiles').then(url => {
+    window._pendingProfilePhoto = url;
+  }).catch(() => showToast('Error al subir foto'));
 }
 
 function previewProvPhoto(input) {
   if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
   const reader = new FileReader();
   reader.onload = e => {
     document.getElementById('prov-initials').style.display = 'none';
@@ -3526,7 +3548,11 @@ function previewProvPhoto(input) {
     img.src = e.target.result;
     img.style.display = 'block';
   };
-  reader.readAsDataURL(input.files[0]);
+  reader.readAsDataURL(file);
+  // Subir a Cloudinary en segundo plano
+  uploadPhoto(file, 'perfiles').then(url => {
+    window._pendingProvPhoto = url;
+  }).catch(() => showToast('Error al subir foto'));
 }
 
 function saveProfile() {
@@ -4882,12 +4908,17 @@ setTimeout(function() { renderProspects(''); }, 100);
 
 function previewProdPhoto(input) {
   if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
   const reader = new FileReader();
   reader.onload = e => {
     const el = document.getElementById('prod-photo-preview');
     if (el) el.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
   };
-  reader.readAsDataURL(input.files[0]);
+  reader.readAsDataURL(file);
+  // Subir a Cloudinary
+  uploadPhoto(file, 'productos').then(url => {
+    window._pendingProdPhoto = url;
+  }).catch(() => showToast('Error al subir foto'));
 }
 
 function toggleVentaTipo(tipo) {
