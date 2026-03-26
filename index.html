@@ -3555,30 +3555,64 @@ function previewProvPhoto(input) {
   }).catch(() => showToast('Error al subir foto'));
 }
 
-function saveProfile() {
+async function saveProfile() {
+  const token = localStorage.getItem('ven_ya_token');
+  if (!token) { showToast('Inicia sesión primero'); return; }
+
+  const nombre   = document.getElementById('edit-name')?.value?.trim();
+  const telefono = document.getElementById('edit-phone')?.value?.trim();
+  const foto_url = window._pendingProfilePhoto || undefined;
+
+  try {
+    const data = await apiCall('PUT', '/usuarios/perfil', { nombre, telefono, foto_url }, token);
+    // Actualizar UI
+    if (nombre) {
+      const initials = nombre.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
+      const av = document.getElementById('buyer-av');
+      if (av) av.textContent = initials;
+      const nm = document.getElementById('buyer-name');
+      if (nm) nm.textContent = nombre;
+    }
+    if (foto_url) {
+      const img = document.getElementById('profile-img-preview');
+      if (img) { img.src = foto_url; img.style.display = 'block'; }
+    }
+    window._pendingProfilePhoto = null;
+    showToast('Perfil actualizado');
+  } catch(e) {
+    showToast('Error al guardar perfil');
+  }
+
   const toast = document.getElementById('save-toast');
-  toast.style.display = 'block';
-  setTimeout(() => {
-    toast.style.display = 'none';
-    go('s-edit-profile', 's-buyer-myprofile');
-  }, 1400);
+  if (toast) { toast.style.display = 'block'; setTimeout(() => { toast.style.display = 'none'; go('s-edit-profile', 's-buyer-myprofile'); }, 1400); }
 }
 
-function saveProvProfile() {
-  // Sync bio from edit form to profile view
+async function saveProvProfile() {
+  const token = localStorage.getItem('ven_ya_token');
+
   var bioInput = document.getElementById('prov-bio-input');
   var bioText  = document.getElementById('prov-bio-text');
+  const bio    = bioInput?.value?.trim();
+  const nombre = document.getElementById('prov-edit-bizname')?.value?.trim();
+  const foto_url = window._pendingProvPhoto || undefined;
+
   if (bioInput && bioText) {
-    var val = bioInput.value.trim();
-    bioText.textContent = val || 'Toca "Editar descripción" para agregar información sobre tu negocio.';
-    bioText.style.color = val ? 'var(--text2)' : 'var(--text3)';
+    bioText.textContent = bio || 'Toca "Editar descripción" para agregar información sobre tu negocio.';
+    bioText.style.color = bio ? 'var(--text2)' : 'var(--text3)';
   }
+
+  if (token) {
+    try {
+      await apiCall('PUT', '/usuarios/perfil', { nombre, bio, foto_url }, token);
+      window._pendingProvPhoto = null;
+      showToast('Perfil actualizado');
+    } catch(e) {
+      showToast('Error al guardar');
+    }
+  }
+
   const toast = document.getElementById('save-toast-prov');
-  toast.style.display = 'block';
-  setTimeout(() => {
-    toast.style.display = 'none';
-    go('s-edit-prov', 's-prov-myprofile');
-  }, 1400);
+  if (toast) { toast.style.display = 'block'; setTimeout(() => { toast.style.display = 'none'; go('s-edit-prov', 's-prov-myprofile'); }, 1400); }
 }
 
 let ckChecked = false;
