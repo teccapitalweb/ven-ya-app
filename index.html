@@ -84,20 +84,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     window._onboardingDone = true;
     const active = document.querySelector(".screen.active");
     if (active && (active.id === "s-splash" || active.id === "s-auth")) {
-      if (typeof goToHome === "function") {
-        goToHome();
-    // Cargar foto si existe
-    if (user.foto_url) setTimeout(() => loadUserPhoto(user.foto_url), 500);
-    // Cargar portada si existe
-    if (user.portada_url) setTimeout(() => {
-      const coverImg = document.getElementById('prov-cover-img');
-      if (coverImg) { coverImg.src = user.portada_url; coverImg.style.display = 'block'; }
-    }, 500);
-      }
-    } else {
-      // Ya estamos en home, cargar foto directo
-      if (user.foto_url) setTimeout(() => loadUserPhoto(user.foto_url), 300);
+      if (typeof goToHome === "function") goToHome();
     }
+    // Cargar fotos después de navegar
+    setTimeout(() => {
+      if (user.foto_url) loadUserPhoto(user.foto_url);
+      if (user.portada_url) {
+        const coverImg = document.getElementById('prov-cover-img');
+        if (coverImg) { coverImg.src = user.portada_url; coverImg.style.display = 'block'; }
+      }
+    }, 600);
   } catch (e) {
     localStorage.removeItem("ven_ya_token");
     localStorage.removeItem("ven_ya_user");
