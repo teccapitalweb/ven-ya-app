@@ -5560,20 +5560,47 @@ async function verPerfilReal(userId) {
   const token = localStorage.getItem('ven_ya_token');
   if (!token) return;
   try {
-    const user = await apiCall('GET', '/usuarios/' + userId, null, token);
-    const nameEl = document.getElementById('prov-profile-name');
-    const locEl  = document.getElementById('prov-profile-loc');
-    const avEl   = document.getElementById('dyn-av');
-    if (nameEl) nameEl.textContent = user.nombre || '';
-    if (locEl)  locEl.textContent  = (user.municipio || '') + ', ' + (user.estado || '');
-    if (avEl)   avEl.textContent   = (user.nombre||'?').substring(0,2).toUpperCase();
-    go('s-search-results', 's-prov-profile');
+    const user     = await apiCall('GET', '/usuarios/' + userId, null, token);
+    const initials = (user.nombre||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    const loc      = [user.municipio, user.estado].filter(Boolean).join(', ');
+
+    // Avatar
+    const avEl = document.querySelector('#s-prov-profile .av-lg');
+    if (avEl) avEl.textContent = initials;
+
+    // Nombre
+    const nameEl = document.querySelector('#s-prov-profile .pname-lg');
+    if (nameEl) nameEl.textContent = user.nombre || 'Proveedor';
+
+    // Ubicación
+    const locEl = document.querySelector('#s-prov-profile .ploc-lg');
+    if (locEl) locEl.innerHTML = '<svg class="ico" viewBox="0 0 24 24" width="11" height="11"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' + loc;
+
+    // Descripción/bio
+    const descEl = document.querySelector('#s-prov-profile .pad > p');
+    if (descEl) descEl.textContent = user.bio || 'Proveedor registrado en ¡Ven Ya!';
+
+    // Calificación y reseñas
+    const stats = document.querySelectorAll('#s-prov-profile .pstat .n');
+    if (stats[0]) stats[0].textContent = user.calificacion ? Number(user.calificacion).toFixed(1) : '0.0';
+    if (stats[1]) stats[1].textContent = user.total_resenas || '0';
+
+    // Botón "Enviar mensaje" → conectar con este proveedor
+    const msgBtn = document.querySelector('#s-prov-profile .btn-p');
+    if (msgBtn) msgBtn.onclick = () => conectarConProveedor(userId, user.nombre || 'Proveedor');
+
+    // Guardar para uso posterior
+    window._currentProveedorId     = userId;
+    window._currentProveedorNombre = user.nombre || 'Proveedor';
+
+    // Navegar al perfil
+    const prev = _prevScreen || 's-search-results';
+    go(prev, 's-prov-profile');
   } catch(e) {
     showToast('Error al cargar perfil');
   }
 }
 
-// Versión por índice — evita problemas con caracteres especiales en nombres
 function verPerfilReal2(i) {
   const p = (window._proveedoresData || [])[i];
   if (p) verPerfilReal(p.id);
@@ -5584,25 +5611,26 @@ function conectarConProveedor2(i) {
   if (p) conectarConProveedor(p.id, p.nombre || 'Proveedor');
 }
 
-// Conectar (iniciar chat) con un proveedor real
 async function conectarConProveedor(proveedorId, nombre) {
   const token = localStorage.getItem('ven_ya_token');
   if (!token) { showToast('Inicia sesión primero'); return; }
   try {
+    showToast('Iniciando chat...');
     const chat = await apiCall('POST', '/chat/iniciar', { proveedor_id: proveedorId }, token);
     _currentChatId = chat.id;
     if (socket) socket.emit('join_chat', chat.id);
-    // Actualizar nombre en la pantalla del chat
-    const nameEl = document.getElementById('buyer-conv-name');
-    const avEl   = document.getElementById('buyer-conv-av');
-    if (nameEl) nameEl.textContent = nombre;
-    if (avEl)   avEl.textContent   = nombre.substring(0,2).toUpperCase();
+
+    // Actualizar header del chat con nombre e iniciales
+    const initials = (nombre||'?').substring(0,2).toUpperCase();
+    const chAv   = document.querySelector('#s-buyer-chatconv .ch-av');
+    const chName = document.querySelector('#s-buyer-chatconv .ch-name');
+    if (chAv)   chAv.textContent   = initials;
+    if (chName) chName.textContent = nombre;
+
     go('s-search-results', 's-buyer-chatconv');
-    // Cargar historial
-    openChat(chat.id, nombre, nombre.substring(0,2).toUpperCase());
-    showToast('Chat iniciado con ' + nombre);
+    openChat(chat.id, nombre, initials);
   } catch(e) {
-    showToast('Error al iniciar chat');
+    showToast('Error al iniciar chat: ' + (e.message||''));
   }
 }
 
