@@ -5439,13 +5439,13 @@ async function buscarConFiltros() {
       return;
     }
 
-    listEl.innerHTML = proveedores.map(p => {
-      const initials   = (p.nombre||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-      const stars      = p.calificacion > 0 ? '\u2605'.repeat(Math.round(p.calificacion)) + ' ' + Number(p.calificacion).toFixed(1) + ' (' + p.total_resenas + ')' : 'Nuevo';
-      const dist       = p.distancia_km ? ' · ' + p.distancia_km + ' km' : '';
-      const planBadge  = p.plan !== 'gratuito' ? ' <span style="font-size:9px;font-weight:700;background:var(--org-l);color:var(--org2);padding:2px 6px;border-radius:4px;">' + p.plan.toUpperCase() + '</span>' : '';
-      const foto       = p.foto_url ? '<img src="'+p.foto_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">' : initials;
-      const nSafe      = (p.nombre||'Proveedor').replace(/['"]/g,'');
+    window._proveedoresData = proveedores;
+    listEl.innerHTML = proveedores.map((p, i) => {
+      const initials  = (p.nombre||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      const stars     = p.calificacion > 0 ? '★'.repeat(Math.round(p.calificacion)) + ' ' + Number(p.calificacion).toFixed(1) + ' (' + p.total_resenas + ')' : 'Nuevo';
+      const dist      = p.distancia_km ? ' · ' + p.distancia_km + ' km' : '';
+      const planBadge = p.plan !== 'gratuito' ? ' <span style="font-size:9px;font-weight:700;background:var(--org-l);color:var(--org2);padding:2px 6px;border-radius:4px;">' + p.plan.toUpperCase() + '</span>' : '';
+      const foto      = p.foto_url ? '<img src="'+p.foto_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">' : initials;
       return '<div style="border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;background:#fff;">'
         + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">'
         + '<div style="width:52px;height:52px;min-width:52px;border-radius:13px;background:var(--org-l);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:var(--org);overflow:hidden;">' + foto + '</div>'
@@ -5456,8 +5456,8 @@ async function buscarConFiltros() {
         + '</div></div>'
         + (p.bio ? '<div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6;">' + p.bio.substring(0,100) + (p.bio.length>100?'...':'') + '</div>' : '')
         + '<div style="display:flex;gap:8px;">'
-        + '<button onclick="verPerfilReal(\'' + p.id + '\')" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:var(--text);">Ver perfil</button>'
-        + '<button onclick="conectarConProveedor(\'' + p.id + '\',\'' + nSafe + '\')" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--org);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#fff;">Conectar</button>'
+        + '<button onclick="verPerfilReal2('+i+')" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:var(--text);">Ver perfil</button>'
+        + '<button onclick="conectarConProveedor2('+i+')" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--org);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#fff;">Conectar</button>'
         + '</div></div>';
     }).join('');
 
@@ -5491,21 +5491,31 @@ function filterResults(val) {
 }
 
 async function buscarProveedores(q) {
-  const token = localStorage.getItem('ven_ya_token');
-  const listEl = document.getElementById('search-result-list');
+  const token   = localStorage.getItem('ven_ya_token');
+  const listEl  = document.getElementById('search-result-list');
   const countEl = document.getElementById('result-count');
   if (!listEl) return;
 
-  // Mostrar loading
   listEl.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px;">Buscando...</div>';
 
   try {
     let endpoint = '/usuarios/proveedores?limit=20';
     if (q && q.trim()) endpoint += '&q=' + encodeURIComponent(q.trim());
 
-    // Agregar filtros si están activos
-    const estadoActivo = window._filtroEstado;
-    if (estadoActivo) endpoint += '&estado=' + encodeURIComponent(estadoActivo);
+    // Usar filtros activos si existen
+    const filtros = window._filtrosActivos || {};
+    if (filtros.estado)     endpoint += '&estado='    + encodeURIComponent(filtros.estado);
+    if (filtros.categoria)  endpoint += '&categoria=' + encodeURIComponent(filtros.categoria);
+
+    // Por defecto buscar cerca si tiene GPS
+    if (!q && !filtros.estado) {
+      try {
+        const pos = await new Promise((res, rej) =>
+          navigator.geolocation.getCurrentPosition(res, rej, { timeout: 3000 })
+        );
+        endpoint += '&lat=' + pos.coords.latitude + '&lng=' + pos.coords.longitude + '&km=100';
+      } catch { /* sin GPS, mostrar todos */ }
+    }
 
     const data = await apiCall('GET', endpoint, null, token);
     const proveedores = data.proveedores || [];
@@ -5551,7 +5561,6 @@ async function verPerfilReal(userId) {
   if (!token) return;
   try {
     const user = await apiCall('GET', '/usuarios/' + userId, null, token);
-    // Abrir pantalla de perfil con datos reales
     const nameEl = document.getElementById('prov-profile-name');
     const locEl  = document.getElementById('prov-profile-loc');
     const avEl   = document.getElementById('dyn-av');
@@ -5562,6 +5571,17 @@ async function verPerfilReal(userId) {
   } catch(e) {
     showToast('Error al cargar perfil');
   }
+}
+
+// Versión por índice — evita problemas con caracteres especiales en nombres
+function verPerfilReal2(i) {
+  const p = (window._proveedoresData || [])[i];
+  if (p) verPerfilReal(p.id);
+}
+
+function conectarConProveedor2(i) {
+  const p = (window._proveedoresData || [])[i];
+  if (p) conectarConProveedor(p.id, p.nombre || 'Proveedor');
 }
 
 // Conectar (iniciar chat) con un proveedor real
