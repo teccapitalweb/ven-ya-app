@@ -1366,7 +1366,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#DDDCDB;min
     </div>
 
     <!-- Pedido activo bar — click to go to order status -->
-    <div id="order-bar" onclick="goTo('s-buyer-chatconv','s-order')" style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--org-l);border-top:1px solid var(--org-ll);cursor:pointer;flex-shrink:0;">
+    <div id="order-bar" onclick="showOrderDetails()" style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--org-l);border-top:1px solid var(--org-ll);cursor:pointer;flex-shrink:0;">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--org)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
       <div style="flex:1;">
         <div id="order-bar-title" style="font-size:11px;font-weight:700;color:var(--org2);">Pedido en camino · $5,600 MXN</div>
@@ -3758,15 +3758,19 @@ function connectSocket() {
     const msgsEl = document.getElementById(msgsId);
     if (!msgsEl) return;
 
-    // Solo mostrar si es del otro usuario (los propios ya se muestran al enviar)
+    // Determinar dirección usando de.id del servidor
     const myId = window._currentUser?.id;
-    if (msg.de_user_id === myId) return;
+    const senderId = msg.de?.id || msg.de_user_id;
+    const dir = (senderId && myId && senderId === myId) ? 'out' : 'in';
+
+    // Evitar duplicar mensajes propios (ya se muestran al enviar)
+    if (dir === 'out') return;
 
     appendMessage(msgsEl, msg.texto, 'in', msg.created_at);
 
-    // Badge de notificación si no estamos en esa pantalla
+    // Badge si no estamos en chat
     const activeScreen = document.querySelector('.screen.active');
-    if (!activeScreen || (!activeScreen.id.includes('chatconv'))) {
+    if (!activeScreen || !activeScreen.id.includes('chatconv')) {
       const badge = document.getElementById('notif-badge');
       if (badge) badge.style.display = 'block';
     }
@@ -3881,7 +3885,9 @@ async function openChat(chatId, contactName, contactInitials) {
     // Renderizar historial desde la BD
     const myId = window._currentUser?.id;
     msgs.forEach(msg => {
-      const dir = msg.de_user_id === myId ? 'out' : 'in';
+      // El backend devuelve msg.de.id o msg.de_user_id
+      const senderId = msg.de?.id || msg.de_user_id;
+      const dir = (senderId && myId && senderId === myId) ? 'out' : 'in';
       appendMessage(msgsEl, msg.texto || '', dir, msg.created_at);
     });
   } catch(e) {
@@ -3903,11 +3909,11 @@ function sendMsg(who) {
   if (msgsEl) appendMessage(msgsEl, text, 'out');
 
   // Enviar por Socket.io si hay chat activo
-  if (socket && _currentChatId) {
+  if (socket && _currentChatId && socket.connected) {
     socket.emit('send_message', { chat_id: _currentChatId, texto: text });
     socket.emit('typing', { chat_id: _currentChatId, is_typing: false });
   } else {
-    // Fallback HTTP si no hay socket
+    // Fallback HTTP — también guarda en BD
     const token = localStorage.getItem('ven_ya_token');
     if (token && _currentChatId) {
       apiCall('POST', '/chat/' + _currentChatId + '/mensajes', { texto: text }, token)
@@ -3935,30 +3941,39 @@ async function loadChatList() {
     const chats = await apiCall('GET', '/chat', null, token);
     const who = currentMode;
     const listEl = document.getElementById(who === 'buyer' ? 'chat-pane-ct' : 'prov-chat-pane-ct');
-    if (!listEl || chats.length === 0) return;
+    if (!listEl) return;
 
-    // Agregar chats reales al principio
+    window._chatsAceptados = window._chatsAceptados || {};
+
     chats.forEach(chat => {
+      // Solo mostrar chats aceptados en Contactos
+      if (chat.estado !== 'aceptado') return;
+
       const existing = document.getElementById('chat-' + chat.id);
-      if (existing) return; // ya está
+      if (existing) return;
+
+      const contacto = chat.contacto || {};
+      const nombre   = contacto.nombre_negocio || contacto.nombre || 'Usuario';
+      const initials = nombre.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
+
+      // Registrar como aceptado
+      window._chatsAceptados[chat.id] = contacto.id || true;
 
       const div = document.createElement('div');
       div.className = 'chat-item';
       div.id = 'chat-' + chat.id;
-      const contacto = chat.contacto;
-      const initials = (contacto.nombre || '?').split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
-      div.innerHTML = `
-        <div class="ch-av" style="background:var(--org-l);color:var(--org);">${initials}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;">
-            <div class="chat-name">${contacto.nombre || 'Usuario'}</div>
-          </div>
-          <div class="chat-prev">${chat.ultimo_mensaje || 'Iniciar conversación'}</div>
-        </div>
-        ${chat.no_leidos > 0 ? '<div style="background:var(--org);color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:2px 7px;flex-shrink:0;">' + chat.no_leidos + '</div>' : ''}
-      `;
+      div.innerHTML = '<div class="ch-av" style="background:var(--org-l);color:var(--org);">' + initials + '</div>'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div class="chat-name">' + nombre + '</div>'
+        + '<div class="chat-prev">' + (chat.ultimo_mensaje || 'Iniciar conversación') + '</div>'
+        + '</div>'
+        + (chat.no_leidos > 0 ? '<div style="background:var(--org);color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:2px 7px;flex-shrink:0;">' + chat.no_leidos + '</div>' : '');
       div.onclick = () => {
-        openChat(chat.id, contacto.nombre, initials);
+        openChat(chat.id, nombre, initials);
+        const chAv = document.querySelector('#s-buyer-chatconv .ch-av');
+        const chName = document.querySelector('#s-buyer-chatconv .ch-name');
+        if (chAv) chAv.textContent = initials;
+        if (chName) chName.textContent = nombre;
         const screen = who === 'buyer' ? 's-buyer-chatconv' : 's-prov-chatconv';
         go(who === 'buyer' ? 's-buyer-chat' : 's-prov-chat', screen);
       };
@@ -3967,6 +3982,15 @@ async function loadChatList() {
   } catch(e) {
     console.warn('Error cargando chats:', e);
   }
+}
+
+// Muestra detalles del pedido sin navegar a pantalla inexistente
+function showOrderDetails() {
+  const bar = document.getElementById('order-bar');
+  if (!bar) return;
+  const title = document.getElementById('order-bar-title')?.textContent || 'Pedido';
+  showToast(title + ' — Ver estado en Mis Pedidos');
+  go('s-buyer-chatconv', 's-my-orders');
 }
 
 // Conectar socket al iniciar sesión
@@ -5675,6 +5699,10 @@ async function verPerfilReal(userId) {
     const initials  = nombre.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
     const loc       = [municipio, estado].filter(Boolean).join(', ');
 
+    // Guardar para toggleSave y otros
+    window._currentProveedorId     = userId;
+    window._currentProveedorNombre = nombre;
+
     const avEl = document.querySelector('#s-prov-profile .av-lg');
     if (avEl) {
       if (user.foto_negocio || user.foto_url) {
@@ -5694,8 +5722,22 @@ async function verPerfilReal(userId) {
     if (stats[0]) stats[0].textContent = user.calificacion ? Number(user.calificacion).toFixed(1) : '0.0';
     if (stats[1]) stats[1].textContent = user.total_resenas || '0';
 
+    // Botón mensaje: si ya conectado abre chat, si no envía solicitud
     const msgBtn = document.querySelector('#s-prov-profile .btn-p');
-    if (msgBtn) msgBtn.onclick = () => enviarSolicitud(userId, nombre);
+    if (msgBtn) {
+      const yaConectado = window._chatsAceptados && Object.values(window._chatsAceptados).includes(userId);
+      if (yaConectado) {
+        msgBtn.textContent = 'Enviar mensaje';
+        msgBtn.onclick = () => conectarConProveedor(userId, nombre);
+      } else {
+        msgBtn.textContent = 'Conectar';
+        msgBtn.onclick = () => enviarSolicitud(userId, nombre);
+      }
+    }
+
+    // Verificado badge
+    const badge = document.querySelector('#s-prov-profile .badge');
+    if (badge) badge.style.display = user.verificado ? '' : 'none';
 
     const backBtn = document.querySelector('#s-prov-profile .back-btn');
     if (backBtn) backBtn.onclick = () => go('s-prov-profile', 's-search-results');
@@ -5719,17 +5761,29 @@ async function enviarSolicitud(proveedorId, nombre) {
   if (!token) { showToast('Inicia sesión primero'); return; }
   try {
     const chat = await apiCall('POST', '/chat/iniciar', { proveedor_id: proveedorId }, token);
-    // Notificar al proveedor por socket en tiempo real
     if (socket) socket.emit('nueva_solicitud', { proveedor_id: proveedorId, chat_id: chat.id });
     showToast('Solicitud enviada a ' + nombre);
-    // Cambiar el botón a "Solicitud enviada"
-    document.querySelectorAll('#search-result-list button').forEach(btn => {
-      if (btn.onclick && btn.onclick.toString().includes(proveedorId)) {
-        btn.textContent = '✓ Solicitud enviada';
-        btn.style.background = '#E5E7EB';
-        btn.style.color = '#6B7280';
-        btn.disabled = true;
-      }
+
+    // Guardar solicitudes enviadas para filtrar búsqueda
+    window._solicitudesEnviadas = window._solicitudesEnviadas || {};
+    window._solicitudesEnviadas[proveedorId] = true;
+
+    // Ocultar la tarjeta del proveedor en el buscador
+    const cards = document.querySelectorAll('#search-result-list .pcard');
+    cards.forEach(card => {
+      const btns = card.querySelectorAll('button');
+      btns.forEach(btn => {
+        if (btn.onclick && btn.onclick.toString().includes(proveedorId)) {
+          // Mostrar estado pendiente en lugar de eliminar
+          card.style.opacity = '0.5';
+          btn.textContent = '✓ Solicitud enviada';
+          btn.style.background = '#E5E7EB';
+          btn.style.color = '#6B7280';
+          btn.disabled = true;
+          const otherBtn = Array.from(btns).find(b => b !== btn);
+          if (otherBtn) otherBtn.disabled = true;
+        }
+      });
     });
   } catch(e) {
     showToast('Error al enviar solicitud');
