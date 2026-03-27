@@ -49,29 +49,36 @@ function applyUserToUI(user) {
 
 function loadUserPhoto(url) {
   if (!url) return;
-  // Avatar pequeño en header comprador
+  const imgTag = '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;border-radius:99px;">';
+
+  // 1. Avatar pequeño — header comprador
   const av = document.getElementById('buyer-av');
-  if (av) av.innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;border-radius:99px;">';
+  if (av) av.innerHTML = imgTag;
 
-  // Avatar pequeño en header proveedor
-  const pavInitials = document.getElementById('prov-av-initials') || document.getElementById('prov-avatar-circle');
-  if (pavInitials) pavInitials.innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;border-radius:99px;">';
+  // 2. Avatar pequeño — header proveedor (encima de portada)
+  const pavCircle = document.getElementById('prov-avatar-circle');
+  if (pavCircle) pavCircle.innerHTML = imgTag;
+  const pavInitials = document.getElementById('prov-av-initials');
+  if (pavInitials) pavInitials.innerHTML = imgTag;
 
-  // Avatar grande proveedor (encima de la portada)
+  // 3. Avatar grande proveedor (sobre la portada)
   const provAvatarImg = document.getElementById('prov-avatar-img');
   if (provAvatarImg) { provAvatarImg.src = url; provAvatarImg.style.display = 'block'; }
 
-  // Foto grande en editar perfil comprador
+  // 4. Foto en pantalla editar perfil comprador
   const profImg = document.getElementById('profile-img-preview');
   if (profImg) { profImg.src = url; profImg.style.display = 'block'; }
   const profInitials = document.getElementById('profile-initials');
   if (profInitials) profInitials.style.display = 'none';
 
-  // Foto grande en editar perfil proveedor
+  // 5. Foto en pantalla editar perfil proveedor
   const provImg = document.getElementById('prov-img-preview');
   if (provImg) { provImg.src = url; provImg.style.display = 'block'; }
   const provInitials = document.getElementById('prov-initials');
   if (provInitials) provInitials.style.display = 'none';
+
+  // Guardar en memoria para uso posterior
+  if (window._currentUser) window._currentUser.foto_url = url;
 }
 
 // ── SESIÓN PERSISTENTE ───────────────────────────────────
@@ -3566,15 +3573,19 @@ function previewPhoto(input) {
   const file = input.files[0];
   const reader = new FileReader();
   reader.onload = e => {
-    document.getElementById('profile-initials').style.display = 'none';
-    const img = document.getElementById('profile-img-preview');
-    img.src = e.target.result;
-    img.style.display = 'block';
+    // Preview inmediato en todas partes
+    loadUserPhoto(e.target.result);
   };
   reader.readAsDataURL(file);
-  // Subir a Cloudinary en segundo plano
-  uploadPhoto(file, 'perfiles').then(url => {
-    window._pendingProfilePhoto = url;
+  // Subir a Cloudinary y guardar en BD
+  uploadPhoto(file, 'perfiles').then(async url => {
+    const token = localStorage.getItem('ven_ya_token');
+    if (token) {
+      await apiCall('PUT', '/usuarios/perfil', { foto_url: url }, token);
+      loadUserPhoto(url); // Sincronizar con URL real de Cloudinary
+      window._pendingProfilePhoto = url;
+      showToast('Foto actualizada en todos los perfiles');
+    }
   }).catch(() => showToast('Error al subir foto'));
 }
 
@@ -3583,15 +3594,19 @@ function previewProvPhoto(input) {
   const file = input.files[0];
   const reader = new FileReader();
   reader.onload = e => {
-    document.getElementById('prov-initials').style.display = 'none';
-    const img = document.getElementById('prov-img-preview');
-    img.src = e.target.result;
-    img.style.display = 'block';
+    // Preview inmediato en todas partes
+    loadUserPhoto(e.target.result);
   };
   reader.readAsDataURL(file);
-  // Subir a Cloudinary en segundo plano
-  uploadPhoto(file, 'perfiles').then(url => {
-    window._pendingProvPhoto = url;
+  // Subir a Cloudinary y guardar en BD
+  uploadPhoto(file, 'perfiles').then(async url => {
+    const token = localStorage.getItem('ven_ya_token');
+    if (token) {
+      await apiCall('PUT', '/usuarios/perfil', { foto_url: url }, token);
+      loadUserPhoto(url); // Sincronizar con URL real de Cloudinary
+      window._pendingProvPhoto = url;
+      showToast('Foto actualizada en todos los perfiles');
+    }
   }).catch(() => showToast('Error al subir foto'));
 }
 
@@ -5035,10 +5050,7 @@ function previewAvatar(input) {
   const file = input.files[0];
   const reader = new FileReader();
   reader.onload = e => {
-    const img = document.getElementById('prov-avatar-img');
-    const circle = document.getElementById('prov-avatar-circle');
-    if (img) { img.src = e.target.result; img.style.display = 'block'; }
-    if (circle) circle.style.display = 'none';
+    loadUserPhoto(e.target.result); // Preview en todas partes
   };
   reader.readAsDataURL(file);
   // Subir a Cloudinary y guardar en BD
@@ -5046,7 +5058,8 @@ function previewAvatar(input) {
     const token = localStorage.getItem('ven_ya_token');
     if (token) {
       await apiCall('PUT', '/usuarios/perfil', { foto_url: url }, token);
-      showToast('Foto de perfil actualizada');
+      loadUserPhoto(url);
+      showToast('Foto actualizada en todos los perfiles');
     }
   }).catch(() => showToast('Error al subir foto'));
 }
