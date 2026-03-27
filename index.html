@@ -57,6 +57,10 @@ function loadUserPhoto(url) {
   const pavInitials = document.getElementById('prov-av-initials') || document.getElementById('prov-avatar-circle');
   if (pavInitials) pavInitials.innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;border-radius:99px;">';
 
+  // Avatar grande proveedor (encima de la portada)
+  const provAvatarImg = document.getElementById('prov-avatar-img');
+  if (provAvatarImg) { provAvatarImg.src = url; provAvatarImg.style.display = 'block'; }
+
   // Foto grande en editar perfil comprador
   const profImg = document.getElementById('profile-img-preview');
   if (profImg) { profImg.src = url; profImg.style.display = 'block'; }
@@ -5008,16 +5012,26 @@ function saveProduct() {
 
 function previewCover(input) {
   if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
   const reader = new FileReader();
   reader.onload = e => {
     const img = document.getElementById('prov-cover-img');
     if (img) { img.src = e.target.result; img.style.display = 'block'; }
   };
-  reader.readAsDataURL(input.files[0]);
+  reader.readAsDataURL(file);
+  // Subir a Cloudinary y guardar en BD
+  uploadPhoto(file, 'portadas').then(async url => {
+    const token = localStorage.getItem('ven_ya_token');
+    if (token) {
+      await apiCall('PUT', '/usuarios/perfil', { foto_url: url }, token);
+      showToast('Portada actualizada');
+    }
+  }).catch(() => showToast('Error al subir portada'));
 }
 
 function previewAvatar(input) {
   if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
   const reader = new FileReader();
   reader.onload = e => {
     const img = document.getElementById('prov-avatar-img');
@@ -5025,7 +5039,15 @@ function previewAvatar(input) {
     if (img) { img.src = e.target.result; img.style.display = 'block'; }
     if (circle) circle.style.display = 'none';
   };
-  reader.readAsDataURL(input.files[0]);
+  reader.readAsDataURL(file);
+  // Subir a Cloudinary y guardar en BD
+  uploadPhoto(file, 'perfiles').then(async url => {
+    const token = localStorage.getItem('ven_ya_token');
+    if (token) {
+      await apiCall('PUT', '/usuarios/perfil', { foto_url: url }, token);
+      showToast('Foto de perfil actualizada');
+    }
+  }).catch(() => showToast('Error al subir foto'));
 }
 
 // ─── Buyer create post ───
