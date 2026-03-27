@@ -36,14 +36,30 @@ async function apiCall(method, endpoint, body, token) {
 function applyUserToUI(user) {
   const name     = user.nombre || "Usuario";
   const initials = name.split(" ").map(w => w[0]).join("").substring(0,2).toUpperCase();
-  const location = user.municipio && user.estado
-                   ? user.municipio + ", " + user.estado
-                   : "México";
+  const location = [user.municipio, user.estado].filter(Boolean).join(", ") || "México";
   window._user = { name, initials, location, bizName: name, bizCat: "General" };
-  window._currentUser = user; // Guardar referencia completa
+  window._currentUser = user;
+
+  // Llenar formularios de edición con datos reales de la BD
+  const editName  = document.getElementById('edit-name');
+  const editPhone = document.getElementById('edit-phone');
+  const editState = document.getElementById('edit-state');
+  const editCity  = document.getElementById('edit-city');
+  const editCP    = document.getElementById('edit-cp');
+  if (editName)  editName.value  = user.nombre   || '';
+  if (editPhone) editPhone.value = user.telefono  || '';
+  if (editState) editState.value = user.estado    || '';
+  if (editCity)  editCity.value  = user.municipio || '';
+  if (editCP)    editCP.value    = user.codigo_postal || '';
+
+  // Llenar formulario proveedor
+  const provBio     = document.getElementById('prov-bio-input');
+  const provBizName = document.getElementById('prov-edit-bizname');
+  if (provBio)     provBio.value     = user.bio    || '';
+  if (provBizName) provBizName.value = user.nombre || '';
+
   if (typeof syncProfiles === "function") syncProfiles();
 
-  // Aplicar foto si existe — con delay para asegurar que el DOM esté listo
   if (user.foto_url) {
     setTimeout(() => loadUserPhoto(user.foto_url), 300);
   }
@@ -3619,23 +3635,23 @@ async function saveProfile() {
 
   const nombre   = document.getElementById('edit-name')?.value?.trim();
   const telefono = document.getElementById('edit-phone')?.value?.trim();
+  const estado   = document.getElementById('edit-state')?.value?.trim();
+  const municipio = document.getElementById('edit-city')?.value?.trim();
   const foto_url = window._pendingProfilePhoto || undefined;
 
   try {
-    const data = await apiCall('PUT', '/usuarios/perfil', { nombre, telefono, foto_url }, token);
-    // Actualizar UI
+    const data = await apiCall('PUT', '/usuarios/perfil', { nombre, telefono, estado, municipio, foto_url }, token);
+    // Actualizar _user global para que syncProfiles use datos frescos
     if (nombre) {
       const initials = nombre.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
-      const av = document.getElementById('buyer-av');
-      if (av) av.textContent = initials;
-      const nm = document.getElementById('buyer-name');
-      if (nm) nm.textContent = nombre;
+      window._user = { ...window._user, name: nombre, initials, bizName: nombre };
+      if (window._currentUser) { window._currentUser.nombre = nombre; window._currentUser.estado = estado; window._currentUser.municipio = municipio; }
+      const location = [municipio, estado].filter(Boolean).join(', ') || window._user?.location || 'México';
+      window._user.location = location;
     }
-    if (foto_url) {
-      const img = document.getElementById('profile-img-preview');
-      if (img) { img.src = foto_url; img.style.display = 'block'; }
-    }
+    if (foto_url) loadUserPhoto(foto_url);
     window._pendingProfilePhoto = null;
+    syncProfiles();
     showToast('Perfil actualizado');
   } catch(e) {
     showToast('Error al guardar perfil');
@@ -3648,10 +3664,10 @@ async function saveProfile() {
 async function saveProvProfile() {
   const token = localStorage.getItem('ven_ya_token');
 
-  var bioInput = document.getElementById('prov-bio-input');
-  var bioText  = document.getElementById('prov-bio-text');
-  const bio    = bioInput?.value?.trim();
-  const nombre = document.getElementById('prov-edit-bizname')?.value?.trim();
+  var bioInput  = document.getElementById('prov-bio-input');
+  var bioText   = document.getElementById('prov-bio-text');
+  const bio     = bioInput?.value?.trim();
+  const nombre  = document.getElementById('prov-edit-bizname')?.value?.trim();
   const foto_url = window._pendingProvPhoto || undefined;
 
   if (bioInput && bioText) {
@@ -3662,7 +3678,12 @@ async function saveProvProfile() {
   if (token) {
     try {
       await apiCall('PUT', '/usuarios/perfil', { nombre, bio, foto_url }, token);
+      // Actualizar _user global
+      if (nombre) { window._user = { ...window._user, bizName: nombre, name: nombre }; }
+      if (window._currentUser) { window._currentUser.bio = bio; if (nombre) window._currentUser.nombre = nombre; }
+      if (foto_url) loadUserPhoto(foto_url);
       window._pendingProvPhoto = null;
+      syncProfiles();
       showToast('Perfil actualizado');
     } catch(e) {
       showToast('Error al guardar');
