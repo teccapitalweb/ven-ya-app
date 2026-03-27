@@ -37,33 +37,51 @@ function applyUserToUI(user) {
   const name     = user.nombre || "Usuario";
   const initials = name.split(" ").map(w => w[0]).join("").substring(0,2).toUpperCase();
   const location = [user.municipio, user.estado].filter(Boolean).join(", ") || "México";
-  window._user = { name, initials, location, bizName: name, bizCat: "General" };
+  window._user = { name, initials, location, bizName: user.nombre_negocio || name, bizCat: user.categoria_negocio || "General" };
   window._currentUser = user;
 
-  // Llenar formularios de edición con datos reales de la BD
+  // Formulario COMPRADOR
   const editName  = document.getElementById('edit-name');
   const editPhone = document.getElementById('edit-phone');
   const editState = document.getElementById('edit-state');
   const editCity  = document.getElementById('edit-city');
   const editCP    = document.getElementById('edit-cp');
-  if (editName)  editName.value  = user.nombre   || '';
-  if (editPhone) editPhone.value = user.telefono  || '';
-  if (editState) editState.value = user.estado    || '';
-  if (editCity)  editCity.value  = user.municipio || '';
+  if (editName)  editName.value  = user.nombre       || '';
+  if (editPhone) editPhone.value = user.telefono      || '';
+  if (editState) editState.value = user.estado        || '';
+  if (editCity)  editCity.value  = user.municipio     || '';
   if (editCP)    editCP.value    = user.codigo_postal || '';
 
-  // Llenar formulario proveedor
-  const provBio     = document.getElementById('prov-bio-input');
+  // Formulario PROVEEDOR (datos negocio separados)
   const provBizName = document.getElementById('prov-edit-bizname');
-  if (provBio)     provBio.value     = user.bio    || '';
-  if (provBizName) provBizName.value = user.nombre || '';
+  const provBio     = document.getElementById('prov-bio-input');
+  const provState   = document.getElementById('prov-edit-state');
+  const provCity    = document.getElementById('prov-edit-city');
+  if (provBizName) provBizName.value = user.nombre_negocio    || '';
+  if (provBio)     provBio.value     = user.bio_negocio       || '';
+  if (provState)   provState.value   = user.estado_negocio    || '';
+  if (provCity)    provCity.value    = user.municipio_negocio || '';
+
+  // Pantalla perfil proveedor
+  const provName   = document.getElementById('prov-myprofile-name');
+  const provLoc    = document.getElementById('prov-myprofile-loc');
+  const provBioTxt = document.getElementById('prov-bio-text');
+  if (provName) provName.textContent = user.nombre_negocio || name;
+  if (provLoc)  provLoc.textContent  = [user.municipio_negocio||user.municipio, user.estado_negocio||user.estado].filter(Boolean).join(', ');
+  if (provBioTxt && (user.bio_negocio || user.bio)) {
+    provBioTxt.textContent = user.bio_negocio || user.bio;
+    provBioTxt.style.color = 'var(--text2)';
+  }
+
+  // Marcar si ya es proveedor
+  if (user.rol === 'proveedor' || user.rol === 'ambos') {
+    window._provProfileActivated = true;
+  }
 
   if (typeof syncProfiles === "function") syncProfiles();
-
-  if (user.foto_url) {
-    setTimeout(() => loadUserPhoto(user.foto_url), 300);
-  }
+  if (user.foto_url) setTimeout(() => loadUserPhoto(user.foto_url), 300);
 }
+
 
 function loadUserPhoto(url) {
   if (!url) return;
@@ -1897,6 +1915,13 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#DDDCDB;min
         </button>
       </div>
 
+      <!-- Verificación Nivel 2 -->
+      <div id="prov-ver-section" style="margin-bottom:16px;">
+        <div class="sh"><span class="st">Verificación</span></div>
+        <div id="prov-ver-badge" style="margin-bottom:10px;"></div>
+        <div id="prov-ver-content"></div>
+      </div>
+
       <!-- Rendimiento del mes -->
       <div class="sh"><span class="st">Rendimiento del mes</span></div>
       <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:13px;margin-bottom:16px;">
@@ -3477,69 +3502,71 @@ function switchRole(toRole) {
 function showProvSetupModal() {
   var phone = document.querySelector('.phone');
   if (!phone) return;
-
   var CATS = ['Frutas y verduras','Animales y ganadería','Ropa y moda','Electrónicos','Artesanías','Agro e insumos','Servicios y oficios','Alimentos preparados','Muebles','Belleza','Construcción','Salud','Educación','Otros'];
-  var catOptions = CATS.map(function(c){ return '<option>' + c + '</option>'; }).join('');
-
+  var catOptions = CATS.map(function(c){ return '<option>'+c+'</option>'; }).join('');
   var modal = document.createElement('div');
   modal.id = 'prov-setup-modal';
-  modal.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:80;display:flex;align-items:flex-end;justify-content:center;';
-
+  modal.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:80;display:flex;align-items:flex-end;justify-content:center;overflow-y:auto;';
   var inner = document.createElement('div');
-  inner.style.cssText = 'background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;';
+  inner.style.cssText = 'background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-height:90vh;overflow-y:auto;';
   inner.innerHTML =
-    '<div style="width:36px;height:4px;background:var(--border);border-radius:99px;margin:0 auto 20px;"></div>' +
-    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">' +
-      '<div style="width:40px;height:40px;border-radius:12px;background:var(--org-l);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
-        '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--org)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>' +
-      '</div>' +
-      '<div><div style="font-size:16px;font-weight:800;color:var(--text);">Activar perfil de Proveedor</div>' +
-      '<div style="font-size:12px;color:var(--text3);">Solo 2 datos para empezar</div></div>' +
-    '</div>' +
-    '<div style="font-size:12px;color:var(--text2);margin-bottom:18px;padding:8px 10px;background:var(--gray-l);border-radius:8px;">Tu correo y teléfono ya están guardados. Solo necesitas estos datos para mostrar tu negocio.</div>' +
-    '<div style="margin-bottom:14px;">' +
-      '<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Nombre de tu negocio</div>' +
-      '<input id="setup-biz-name" class="inp" placeholder="Ej. Rancho Los Pinos, Paca Mayoreo...">' +
-    '</div>' +
-    '<div style="margin-bottom:22px;">' +
-      '<div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">¿Qué vendes?</div>' +
-      '<select id="setup-category" class="inp">' + catOptions + '</select>' +
-    '</div>' +
-    '<button id="setup-confirm-btn" onclick="confirmProvSetup()" class="btn btn-p" style="width:100%;margin-bottom:10px;">Activar como Proveedor</button>' +
+    '<div style="width:36px;height:4px;background:var(--border);border-radius:99px;margin:0 auto 20px;"></div>'+
+    '<div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px;">Activar perfil de Proveedor</div>'+
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:14px;">Tu perfil de comprador no se modifica. Estos datos son exclusivos de tu negocio.</div>'+
+    '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:5px;">NOMBRE DEL NEGOCIO *</div><input id="setup-biz-name" class="inp" placeholder="Ej. Rancho Los Pinos"></div>'+
+    '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:5px;">QUÉ VENDES *</div><select id="setup-category" class="inp">'+catOptions+'</select></div>'+
+    '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:5px;">TELÉFONO DE CONTACTO *</div><input id="setup-phone" class="inp" type="tel" placeholder="2381234567"></div>'+
+    '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:5px;">ESTADO *</div><input id="setup-state" class="inp" placeholder="Ej. Puebla"></div>'+
+    '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:5px;">MUNICIPIO *</div><input id="setup-city" class="inp" placeholder="Ej. Tehuacán"></div>'+
+    '<div style="margin-bottom:20px;"><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:5px;">TIPO DE VENTA *</div><select id="setup-tipoventa" class="inp"><option value="ambos">Mayoreo y menudeo</option><option value="mayoreo">Solo mayoreo</option><option value="menudeo">Solo menudeo</option></select></div>'+
+    '<button id="setup-confirm-btn" onclick="confirmProvSetup()" class="btn btn-p" style="width:100%;margin-bottom:10px;">Activar como Proveedor</button>'+
     '<button onclick="document.getElementById(\'prov-setup-modal\').remove()" style="width:100%;padding:12px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--text3);cursor:pointer;">Cancelar</button>';
-
   modal.appendChild(inner);
   phone.appendChild(modal);
 }
 
-function confirmProvSetup() {
-  var nameEl = document.getElementById('setup-biz-name');
-  var catEl  = document.getElementById('setup-category');
-  if (!nameEl || !nameEl.value.trim()) {
-    nameEl.style.borderColor = '#E24B4A';
-    setTimeout(function(){ nameEl.style.borderColor = ''; }, 1500);
-    showToast('Ingresa el nombre de tu negocio');
-    return;
+async function confirmProvSetup() {
+  const nombre_negocio    = document.getElementById('setup-biz-name')?.value?.trim();
+  const categoria_negocio = document.getElementById('setup-category')?.value;
+  const telefono          = document.getElementById('setup-phone')?.value?.trim();
+  const estado_negocio    = document.getElementById('setup-state')?.value?.trim();
+  const municipio_negocio = document.getElementById('setup-city')?.value?.trim();
+  const tipo_venta        = document.getElementById('setup-tipoventa')?.value;
+  if (!nombre_negocio || !estado_negocio || !municipio_negocio || !telefono) {
+    showToast('Completa todos los campos obligatorios'); return;
   }
-  // Save values to provider profile display
-  var bizName = nameEl.value.trim();
-  var cat     = catEl ? catEl.value : 'Otros';
-  _user.bizName = bizName;
-  _user.bizCat  = cat;
-  var provBiz = document.querySelector('.prov-biz');
-  // Business name saved for future use (profile screen updated separately)
+  const token = localStorage.getItem('ven_ya_token');
+  if (!token) { showToast('Inicia sesión primero'); return; }
+  const btn = document.getElementById('setup-confirm-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Activando...'; }
+  try {
+    const data = await apiCall('POST', '/usuarios/activar-proveedor', {
+      nombre_negocio, categoria_negocio, telefono, estado_negocio, municipio_negocio, tipo_venta
+    }, token);
+    if (window._currentUser) {
+      window._currentUser.rol = 'ambos';
+      window._currentUser.nombre_negocio = nombre_negocio;
+      window._currentUser.categoria_negocio = categoria_negocio;
+      window._currentUser.estado_negocio = estado_negocio;
+      window._currentUser.municipio_negocio = municipio_negocio;
+      window._currentUser.tipo_venta = tipo_venta;
+    }
+    window._user.bizName = nombre_negocio;
+    window._provProfileActivated = true;
+    const modal = document.getElementById('prov-setup-modal');
+    if (modal) modal.remove();
+    currentMode = 'prov';
+    document.getElementById('btn-buyer').classList.remove('active');
+    document.getElementById('btn-prov').classList.add('active');
+    hideAll();
+    document.getElementById('s-prov-home').classList.add('active');
+    syncProfiles();
+    showToast('¡Perfil de Proveedor activado!');
+  } catch(e) {
+    showToast('Error: ' + (e.message || 'intenta de nuevo'));
+    if (btn) { btn.disabled = false; btn.textContent = 'Activar como Proveedor'; }
+  }
 
-  _provProfileActivated = true;
-  var modal = document.getElementById('prov-setup-modal');
-  if (modal) modal.remove();
-
-  currentMode = 'prov';
-  document.getElementById('btn-buyer').classList.remove('active');
-  document.getElementById('btn-prov').classList.add('active');
-  hideAll();
-  document.getElementById('s-prov-home').classList.add('active');
-  syncProfiles();
-  showToast('¡Perfil de Proveedor activado! Completa tu información desde "Mi perfil"');
 }
 
 function hideAll() {
@@ -3647,7 +3674,7 @@ async function saveProfile() {
   const foto_url = window._pendingProfilePhoto || undefined;
 
   try {
-    const data = await apiCall('PUT', '/usuarios/perfil', { nombre, telefono, estado, municipio, foto_url }, token);
+    const data = await apiCall('PUT', '/usuarios/perfil-comprador', { nombre, telefono, estado, municipio, foto_url }, token);
     // Actualizar _user global para que syncProfiles use datos frescos
     if (nombre) {
       const initials = nombre.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
@@ -3684,7 +3711,7 @@ async function saveProvProfile() {
 
   if (token) {
     try {
-      await apiCall('PUT', '/usuarios/perfil', { nombre, bio, foto_url }, token);
+      await apiCall('PUT', '/usuarios/perfil-proveedor', { nombre_negocio: nombre, bio_negocio: bio, foto_negocio: foto_url }, token);
       // Actualizar _user global
       if (nombre) { window._user = { ...window._user, bizName: nombre, name: nombre }; }
       if (window._currentUser) { window._currentUser.bio = bio; if (nombre) window._currentUser.nombre = nombre; }
@@ -5851,17 +5878,173 @@ window.provNav = function(screenId, btnId) {
   if (screenId === 's-prov-chat') {
     setTimeout(() => { cargarChatsProv(); cargarSolicitudesProv(); }, 300);
   }
-  // Asegurar que s-prov-myprofile esté visible cuando se navega a él
   if (screenId === 's-prov-myprofile') {
     const s = document.getElementById('s-prov-myprofile');
     if (s) s.classList.add('active');
+    setTimeout(() => updateVerSection(window._currentUser?.verificacion_estado || 'sin_solicitud'), 300);
   }
 };
+
+// ══════════════════════════════════════════
+// VERIFICACIÓN NIVEL 2
+// ══════════════════════════════════════════
+let _ineUrl = null, _selfieUrl = null;
+
+function previewVerifPhoto(input, previewId, tipo) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = e => {
+    const el = document.getElementById(previewId);
+    if (el) el.innerHTML = '<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">';
+  };
+  reader.readAsDataURL(file);
+  uploadPhoto(file, 'verificacion').then(url => {
+    if (tipo === 'ine') _ineUrl = url;
+    else _selfieUrl = url;
+    showToast('Foto subida ✓');
+  }).catch(() => showToast('Error al subir foto'));
+}
+
+async function enviarVerificacion() {
+  if (!_ineUrl || !_selfieUrl) { showToast('Sube ambas fotos para continuar'); return; }
+  const token = localStorage.getItem('ven_ya_token');
+  const btn = document.getElementById('ver-submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+  try {
+    await apiCall('POST', '/usuarios/solicitar-verificacion', { ine_foto_url: _ineUrl, selfie_ine_url: _selfieUrl }, token);
+    if (window._currentUser) window._currentUser.verificacion_estado = 'pendiente';
+    showToast('¡Solicitud enviada! Revisaremos en 24-48 hrs.');
+    updateVerSection('pendiente');
+    go('s-verificacion', 's-prov-myprofile');
+  } catch(e) {
+    showToast('Error: ' + (e.message||'intenta de nuevo'));
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar solicitud'; }
+  }
+}
+
+function updateVerSection(estado) {
+  const content = document.getElementById('prov-ver-content');
+  const badge   = document.getElementById('prov-ver-badge');
+  if (!content) return;
+  if (window._currentUser?.verificado || estado === 'aprobado') {
+    if (badge) badge.innerHTML = '<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;background:#FFF4EE;color:#F97316;padding:4px 12px;border-radius:99px;">✓ Proveedor Verificado</span>';
+    content.innerHTML = '<div style="font-size:12px;color:var(--text2);">Apareces primero en los resultados de búsqueda.</div>';
+  } else if (estado === 'pendiente') {
+    if (badge) badge.innerHTML = '<span style="font-size:11px;font-weight:700;background:#F3F4F6;color:#6B7280;padding:3px 10px;border-radius:99px;">⏳ Verificación pendiente</span>';
+    content.innerHTML = '<div style="font-size:12px;color:#6B7280;background:#F3F4F6;padding:10px 12px;border-radius:10px;">Tu solicitud está siendo revisada. Te notificaremos en 24-48 hrs.</div>';
+  } else if (estado === 'rechazado') {
+    const motivo = window._currentUser?.verificacion_motivo || 'Documentos no válidos';
+    if (badge) badge.innerHTML = '';
+    content.innerHTML = '<div style="font-size:12px;color:#E24B4A;background:#FEF2F2;padding:10px 12px;border-radius:10px;margin-bottom:10px;">Rechazada: '+motivo+'</div><button onclick="go(\'s-prov-myprofile\',\'s-verificacion\')" class="btn btn-p btn-sm">Intentar de nuevo</button>';
+  } else {
+    if (badge) badge.innerHTML = '';
+    content.innerHTML = '<button onclick="go(\'s-prov-myprofile\',\'s-verificacion\')" class="btn btn-g btn-sm" style="gap:6px;"><svg class="ico" viewBox="0 0 24 24" width="13" height="13"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Solicitar verificación Nivel 2</button>';
+  }
+}
+
+async function abrirAdminPanel() {
+  if (window._currentUser?.correo !== 'ipcilinstituto@gmail.com') { showToast('Solo administradores'); return; }
+  go('s-prov-myprofile', 's-admin-panel');
+  const token = localStorage.getItem('ven_ya_token');
+  try {
+    const list = await apiCall('GET', '/usuarios/admin/verificaciones', null, token);
+    const el = document.getElementById('admin-ver-list');
+    if (!el) return;
+    if (!list.length) { el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);">No hay solicitudes pendientes 🎉</div>'; return; }
+    el.innerHTML = list.map(u => '<div style="border:1px solid var(--border);border-radius:13px;padding:14px;margin-bottom:12px;background:#fff;">'
+      +'<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px;">'+(u.nombre_negocio||u.nombre)+'</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-bottom:10px;">'+u.correo+'</div>'
+      +'<div style="display:flex;gap:8px;margin-bottom:10px;">'
+      +'<a href="'+u.ine_foto_url+'" target="_blank" style="flex:1;padding:8px;border-radius:9px;border:1.5px solid var(--border);background:#fff;font-size:11px;font-weight:700;color:var(--text);text-align:center;text-decoration:none;">Ver INE</a>'
+      +'<a href="'+u.selfie_ine_url+'" target="_blank" style="flex:1;padding:8px;border-radius:9px;border:1.5px solid var(--border);background:#fff;font-size:11px;font-weight:700;color:var(--text);text-align:center;text-decoration:none;">Ver Selfie</a>'
+      +'</div><div style="display:flex;gap:8px;">'
+      +'<button onclick="adminRechazar(\''+u.id+'\')" style="flex:1;padding:9px;border-radius:9px;border:1.5px solid #E24B4A;background:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#E24B4A;">Rechazar</button>'
+      +'<button onclick="adminAprobar(\''+u.id+'\')" style="flex:1;padding:9px;border-radius:9px;border:none;background:#F97316;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#fff;">Aprobar ✓</button>'
+      +'</div></div>').join('');
+  } catch(e) {
+    const el = document.getElementById('admin-ver-list');
+    if (el) el.innerHTML = '<div style="text-align:center;padding:32px;color:#E24B4A;">Sin acceso</div>';
+  }
+}
+
+async function adminAprobar(id) {
+  const token = localStorage.getItem('ven_ya_token');
+  try { await apiCall('PUT', '/usuarios/admin/verificaciones/'+id+'/aprobar', {}, token); showToast('✓ Aprobado'); abrirAdminPanel(); }
+  catch(e) { showToast('Error'); }
+}
+async function adminRechazar(id) {
+  const motivo = prompt('Motivo:') || 'Documentos no válidos';
+  const token  = localStorage.getItem('ven_ya_token');
+  try { await apiCall('PUT', '/usuarios/admin/verificaciones/'+id+'/rechazar', { motivo }, token); showToast('Rechazado'); abrirAdminPanel(); }
+  catch(e) { showToast('Error'); }
+}
 </script>
 
 <!-- ══════════════════════════════════════════ -->
 <!-- RECUPERAR CONTRASEÑA — PASO 1: CORREO   -->
 <!-- ══════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════ -->
+<!-- SOLICITAR VERIFICACIÓN NIVEL 2           -->
+<!-- ══════════════════════════════════════════ -->
+<div class="screen" id="s-verificacion">
+  <div class="sb"><span class="time">9:41</span></div>
+  <div class="scroll pad" style="padding-top:16px;">
+    <button class="back-btn" onclick="go('s-verificacion','s-prov-myprofile')" style="margin-bottom:20px;">
+      <svg class="ico" viewBox="0 0 24 24" width="18" height="18"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Volver
+    </button>
+    <div style="width:52px;height:52px;background:var(--org-l);border-radius:16px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
+      <svg class="ico" viewBox="0 0 24 24" width="26" height="26" style="color:var(--org)"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    </div>
+    <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:6px;">Verificación Nivel 2</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:20px;">Sube tu INE y una selfie sosteniéndolo. Revisaremos tu solicitud en 24-48 hrs y recibirás el badge de verificado.</div>
+
+    <div style="background:var(--org-l);border-radius:12px;padding:12px 14px;margin-bottom:20px;">
+      <div style="font-size:12px;font-weight:700;color:var(--org2);margin-bottom:4px;">¿Qué obtienes al verificarte?</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6;">✓ Badge naranja "Verificado" visible en búsquedas<br>✓ Apareces primero en los resultados<br>✓ Más confianza para los compradores</div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">Foto del INE (frente)</div>
+      <div id="ine-preview" onclick="document.getElementById('ine-input').click()" style="height:120px;background:var(--gray-l);border-radius:12px;border:1.5px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
+        <svg class="ico" viewBox="0 0 24 24" width="24" height="24" style="color:var(--text3)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span style="font-size:12px;color:var(--text3);">Toca para subir foto</span>
+      </div>
+      <input id="ine-input" type="file" accept="image/*" style="display:none;" onchange="previewVerifPhoto(this,'ine-preview','ine')">
+    </div>
+
+    <div style="margin-bottom:24px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">Selfie sosteniendo tu INE</div>
+      <div id="selfie-preview" onclick="document.getElementById('selfie-input').click()" style="height:120px;background:var(--gray-l);border-radius:12px;border:1.5px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
+        <svg class="ico" viewBox="0 0 24 24" width="24" height="24" style="color:var(--text3)"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span style="font-size:12px;color:var(--text3);">Toca para subir selfie</span>
+      </div>
+      <input id="selfie-input" type="file" accept="image/*" style="display:none;" onchange="previewVerifPhoto(this,'selfie-preview','selfie')">
+    </div>
+
+    <button onclick="enviarVerificacion()" class="btn btn-p" style="width:100%;margin-bottom:10px;" id="ver-submit-btn">Enviar solicitud</button>
+    <button onclick="go('s-verificacion','s-prov-myprofile')" style="width:100%;padding:12px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--text3);cursor:pointer;">Cancelar</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- PANEL ADMIN — VERIFICACIONES             -->
+<!-- ══════════════════════════════════════════ -->
+<div class="screen" id="s-admin-panel">
+  <div class="sb"><span class="time">9:41</span></div>
+  <div style="padding:14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;">
+    <button class="back-btn" onclick="go('s-admin-panel','s-prov-myprofile')">
+      <svg class="ico" viewBox="0 0 24 24" width="18" height="18"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    </button>
+    <div style="font-size:16px;font-weight:800;color:var(--text);">Panel Admin</div>
+  </div>
+  <div class="scroll pad" style="padding-top:16px;">
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;">Solicitudes de verificación pendientes</div>
+    <div id="admin-ver-list"><div style="text-align:center;padding:32px;color:var(--text3);">Cargando...</div></div>
+  </div>
+</div>
+
 <div class="screen" id="s-reset-1">
   <div class="sb"><span class="time">9:41</span></div>
   <div class="scroll pad" style="padding-top:40px;">
