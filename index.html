@@ -3549,13 +3549,14 @@ function buyerNav(screenId, btnId) {
 }
 
 function provNav(screenId, btnId) {
-  const provScreens = ['s-prov-home','s-prov-chat','s-prov-chatconv','s-prov-myprofile'];
+  const provScreens = ['s-prov-home','s-prov-chat','s-prov-chatconv','s-prov-myprofile','s-edit-prov','s-add-product'];
   provScreens.forEach(id => {
     const s = document.getElementById(id);
     if (s) s.classList.remove('active');
   });
-  document.querySelectorAll('#s-prov-home .bnav .bn, #s-prov-chat .bnav .bn, #s-prov-chatconv .bnav .bn, #s-prov-myprofile .bnav .bn').forEach(b => b.classList.remove('active'));
-  document.getElementById(screenId).classList.add('active');
+  document.querySelectorAll('.bnav .bn').forEach(b => b.classList.remove('active'));
+  const target = document.getElementById(screenId);
+  if (target) target.classList.add('active');
   const btn = document.getElementById(btnId);
   if (btn) btn.classList.add('active');
 }
@@ -5600,13 +5601,15 @@ async function verPerfilReal(userId) {
     const msgBtn = document.querySelector('#s-prov-profile .btn-p');
     if (msgBtn) msgBtn.onclick = () => conectarConProveedor(userId, user.nombre || 'Proveedor');
 
-    // Guardar para uso posterior
-    window._currentProveedorId     = userId;
-    window._currentProveedorNombre = user.nombre || 'Proveedor';
+    // Guardar pantalla de origen para el botón volver
+    window._provProfileFrom = 's-search-results';
+
+    // Actualizar botón volver
+    const backBtn = document.querySelector('#s-prov-profile .back-btn');
+    if (backBtn) backBtn.onclick = () => go('s-prov-profile', 's-search-results');
 
     // Navegar al perfil
-    const prev = _prevScreen || 's-search-results';
-    go(prev, 's-prov-profile');
+    go('s-search-results', 's-prov-profile');
   } catch(e) {
     showToast('Error al cargar perfil');
   }
@@ -5819,6 +5822,11 @@ window.provNav = function(screenId, btnId) {
   _origProvNav(screenId, btnId);
   if (screenId === 's-prov-chat') {
     setTimeout(() => { cargarChatsProv(); cargarSolicitudesProv(); }, 300);
+  }
+  // Asegurar que s-prov-myprofile esté visible cuando se navega a él
+  if (screenId === 's-prov-myprofile') {
+    const s = document.getElementById('s-prov-myprofile');
+    if (s) s.classList.add('active');
   }
 };
 </script>
