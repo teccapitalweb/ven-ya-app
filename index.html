@@ -5539,28 +5539,39 @@ async function buscarProveedores(q) {
       return;
     }
 
-    listEl.innerHTML = proveedores.map(p => {
-      const initials = (p.nombre || '?').split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
-      const stars = p.calificacion > 0 ? '★'.repeat(Math.round(p.calificacion)) + ' ' + p.calificacion.toFixed(1) + ' (' + p.total_resenas + ')' : 'Nuevo';
-      const dist = p.distancia_km ? ' · ' + p.distancia_km + ' km' : '';
-      const planBadge = p.plan !== 'gratuito' ? '<span style="font-size:9px;font-weight:700;background:var(--org-l);color:var(--org2);padding:2px 6px;border-radius:4px;margin-left:4px;">' + p.plan.toUpperCase() + '</span>' : '';
-
-      return '<div class="pcard" style="border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;">' +
-        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">' +
-        '<div style="width:48px;height:48px;border-radius:13px;background:var(--org-l);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:var(--org);flex-shrink:0;">' +
-        (p.foto_url ? '<img src="' + p.foto_url + '" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">' : initials) +
-        '</div>' +
-        '<div style="flex:1;min-width:0;">' +
-        '<div class="pname" style="font-size:14px;font-weight:700;color:var(--text);">' + (p.nombre || 'Proveedor') + planBadge + '</div>' +
-        '<div style="font-size:11px;color:var(--text3);">' + (p.estado || '') + (p.municipio ? ', ' + p.municipio : '') + dist + '</div>' +
-        '</div></div>' +
-        (p.bio ? '<div style="font-size:12px;color:var(--text2);margin-bottom:8px;line-height:1.5;">' + p.bio.substring(0,80) + (p.bio.length > 80 ? '...' : '') + '</div>' : '') +
-        '<div style="font-size:11px;color:var(--org2);margin-bottom:10px;">' + stars + '</div>' +
-        '<div style="display:flex;gap:8px;">' +
-        '<button onclick="verPerfilReal(\'' + p.id + '\')" style="flex:1;padding:8px;border-radius:9px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);">Ver perfil</button>' +
-        '<button onclick="conectarConProveedor(\'' + p.id + '\',\'' + (p.nombre||'').replace(/'/g,'') + '\')" style="flex:1;padding:8px;border-radius:9px;border:none;background:var(--org);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;color:#fff;">Conectar</button>' +
-        '</div></div>';
-    }).join('');
+    window._proveedoresData = proveedores;
+    const cards = proveedores.map((p, idx) => {
+      const initials = (p.nombre||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      const cal      = Number(p.calificacion) || 0;
+      const stars    = cal > 0 ? '★ ' + cal.toFixed(1) + ' (' + (p.total_resenas||0) + ' reseñas)' : 'Nuevo';
+      const dist     = p.distancia_km ? '· ' + p.distancia_km + ' km' : '';
+      const ciudad   = [p.municipio, p.estado].filter(Boolean).join(', ');
+      const ubic     = [ciudad, dist].filter(Boolean).join(' ');
+      const plan     = p.plan !== 'gratuito' ? ' <span style="font-size:9px;font-weight:700;background:var(--org-l);color:var(--org2);padding:2px 7px;border-radius:99px;">'+p.plan.toUpperCase()+'</span>' : '';
+      const bio      = p.bio ? p.bio.substring(0,100)+(p.bio.length>100?'...':'') : '';
+      const foto     = p.foto_url
+        ? '<img src="'+p.foto_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">'
+        : '<span style="font-size:18px;font-weight:800;color:var(--org);">'+initials+'</span>';
+      return ''
+        + '<div class="pcard" style="border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px;background:#fff;">'
+        +   '<div style="padding:14px 14px 10px;">'
+        +     '<div style="display:flex;gap:12px;align-items:center;margin-bottom:'+(bio?'10px':'6px')+';">'
+        +       '<div style="width:52px;height:52px;flex-shrink:0;border-radius:12px;background:var(--org-l);overflow:hidden;display:flex;align-items:center;justify-content:center;">'+foto+'</div>'
+        +       '<div style="flex:1;min-width:0;">'
+        +         '<div style="font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(p.nombre||'Proveedor')+plan+'</div>'
+        +         '<div style="font-size:11px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+ubic+'</div>'
+        +         '<div style="font-size:11px;color:var(--org2);margin-top:2px;">'+stars+'</div>'
+        +       '</div>'
+        +     '</div>'
+        +     (bio ? '<div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:4px;">'+bio+'</div>' : '')
+        +   '</div>'
+        +   '<div style="display:flex;border-top:1px solid var(--border);">'
+        +     '<button onclick="verPerfilReal2('+idx+')" style="flex:1;padding:11px;border:none;border-right:1px solid var(--border);background:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:var(--text);">Ver perfil</button>'
+        +     '<button onclick="conectarConProveedor2('+idx+')" style="flex:1;padding:11px;border:none;background:var(--org-l);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:var(--org2);">Conectar</button>'
+        +   '</div>'
+        + '</div>';
+    });
+    listEl.innerHTML = cards.join('');
 
   } catch(e) {
     listEl.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px;">Error al buscar. Intenta de nuevo.</div>';
