@@ -879,7 +879,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#DDDCDB;min
     <!-- Search bar always visible on home -->
     <div style="padding:0 18px 10px;flex-shrink:0;">
       <div style="display:flex;gap:8px;align-items:center;">
-        <div class="searchbar" style="flex:1;margin-bottom:0;cursor:pointer;" onclick="go('s-buyer-home','s-search-results')">
+        <div class="searchbar" style="flex:1;margin-bottom:0;cursor:pointer;" onclick="go('s-buyer-home','s-search-results');setTimeout(()=>buscarProveedores(''),300)">
           <svg class="ico" viewBox="0 0 24 24" width="16" height="16" style="color:var(--text3);flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input placeholder="Buscar proveedores, fresas, ropa..." readonly style="cursor:pointer;">
         </div>
@@ -5378,20 +5378,123 @@ function clearFilters() {
   });
 }
 
+// ── BÚSQUEDA REAL DE PROVEEDORES ────────────────────────
+let _searchTimer = null;
+
 function filterResults(val) {
-  const cards = document.querySelectorAll('#search-result-list .pcard');
-  let visible = 0;
-  cards.forEach(c => {
-    const tags = (c.dataset.tags || '') + ' ' + (c.querySelector('.pname')?.textContent || '');
-    const match = !val || tags.toLowerCase().includes(val.toLowerCase());
-    c.style.display = match ? '' : 'none';
-    if (match) visible++;
-  });
-  const nr = document.getElementById('no-results');
-  if (nr) nr.style.display = visible === 0 ? 'block' : 'none';
-  const rc = document.getElementById('result-count');
-  if (rc) rc.textContent = visible + ' resultado' + (visible !== 1 ? 's' : '') + ' para';
+  // Debounce — espera 400ms antes de buscar
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => buscarProveedores(val), 400);
 }
+
+async function buscarProveedores(q) {
+  const token = localStorage.getItem('ven_ya_token');
+  const listEl = document.getElementById('search-result-list');
+  const countEl = document.getElementById('result-count');
+  if (!listEl) return;
+
+  // Mostrar loading
+  listEl.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px;">Buscando...</div>';
+
+  try {
+    let endpoint = '/usuarios/proveedores?limit=20';
+    if (q && q.trim()) endpoint += '&q=' + encodeURIComponent(q.trim());
+
+    // Agregar filtros si están activos
+    const estadoActivo = window._filtroEstado;
+    if (estadoActivo) endpoint += '&estado=' + encodeURIComponent(estadoActivo);
+
+    const data = await apiCall('GET', endpoint, null, token);
+    const proveedores = data.proveedores || [];
+
+    if (countEl) countEl.textContent = proveedores.length + ' resultado' + (proveedores.length !== 1 ? 's' : '') + ' para';
+
+    if (proveedores.length === 0) {
+      listEl.innerHTML = '<div id="no-results" style="text-align:center;padding:40px 20px;"><div style="font-size:32px;margin-bottom:12px;">🔍</div><div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;">Sin resultados</div><div style="font-size:13px;color:var(--text3);">Intenta con otra búsqueda o regístrate como proveedor</div></div>';
+      return;
+    }
+
+    listEl.innerHTML = proveedores.map(p => {
+      const initials = (p.nombre || '?').split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
+      const stars = p.calificacion > 0 ? '★'.repeat(Math.round(p.calificacion)) + ' ' + p.calificacion.toFixed(1) + ' (' + p.total_resenas + ')' : 'Nuevo';
+      const dist = p.distancia_km ? ' · ' + p.distancia_km + ' km' : '';
+      const planBadge = p.plan !== 'gratuito' ? '<span style="font-size:9px;font-weight:700;background:var(--org-l);color:var(--org2);padding:2px 6px;border-radius:4px;margin-left:4px;">' + p.plan.toUpperCase() + '</span>' : '';
+
+      return '<div class="pcard" style="border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;">' +
+        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">' +
+        '<div style="width:48px;height:48px;border-radius:13px;background:var(--org-l);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:var(--org);flex-shrink:0;">' +
+        (p.foto_url ? '<img src="' + p.foto_url + '" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">' : initials) +
+        '</div>' +
+        '<div style="flex:1;min-width:0;">' +
+        '<div class="pname" style="font-size:14px;font-weight:700;color:var(--text);">' + (p.nombre || 'Proveedor') + planBadge + '</div>' +
+        '<div style="font-size:11px;color:var(--text3);">' + (p.estado || '') + (p.municipio ? ', ' + p.municipio : '') + dist + '</div>' +
+        '</div></div>' +
+        (p.bio ? '<div style="font-size:12px;color:var(--text2);margin-bottom:8px;line-height:1.5;">' + p.bio.substring(0,80) + (p.bio.length > 80 ? '...' : '') + '</div>' : '') +
+        '<div style="font-size:11px;color:var(--org2);margin-bottom:10px;">' + stars + '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+        '<button onclick="verPerfilReal(\'' + p.id + '\')" style="flex:1;padding:8px;border-radius:9px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);">Ver perfil</button>' +
+        '<button onclick="conectarConProveedor(\'' + p.id + '\',\'' + (p.nombre||'').replace(/'/g,'') + '\')" style="flex:1;padding:8px;border-radius:9px;border:none;background:var(--org);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;color:#fff;">Conectar</button>' +
+        '</div></div>';
+    }).join('');
+
+  } catch(e) {
+    listEl.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px;">Error al buscar. Intenta de nuevo.</div>';
+  }
+}
+
+// Ver perfil real de un proveedor
+async function verPerfilReal(userId) {
+  const token = localStorage.getItem('ven_ya_token');
+  if (!token) return;
+  try {
+    const user = await apiCall('GET', '/usuarios/' + userId, null, token);
+    // Abrir pantalla de perfil con datos reales
+    const nameEl = document.getElementById('prov-profile-name');
+    const locEl  = document.getElementById('prov-profile-loc');
+    const avEl   = document.getElementById('dyn-av');
+    if (nameEl) nameEl.textContent = user.nombre || '';
+    if (locEl)  locEl.textContent  = (user.municipio || '') + ', ' + (user.estado || '');
+    if (avEl)   avEl.textContent   = (user.nombre||'?').substring(0,2).toUpperCase();
+    go('s-search-results', 's-prov-profile');
+  } catch(e) {
+    showToast('Error al cargar perfil');
+  }
+}
+
+// Conectar (iniciar chat) con un proveedor real
+async function conectarConProveedor(proveedorId, nombre) {
+  const token = localStorage.getItem('ven_ya_token');
+  if (!token) { showToast('Inicia sesión primero'); return; }
+  try {
+    const chat = await apiCall('POST', '/chat/iniciar', { proveedor_id: proveedorId }, token);
+    _currentChatId = chat.id;
+    if (socket) socket.emit('join_chat', chat.id);
+    // Actualizar nombre en la pantalla del chat
+    const nameEl = document.getElementById('buyer-conv-name');
+    const avEl   = document.getElementById('buyer-conv-av');
+    if (nameEl) nameEl.textContent = nombre;
+    if (avEl)   avEl.textContent   = nombre.substring(0,2).toUpperCase();
+    go('s-search-results', 's-buyer-chatconv');
+    // Cargar historial
+    openChat(chat.id, nombre, nombre.substring(0,2).toUpperCase());
+    showToast('Chat iniciado con ' + nombre);
+  } catch(e) {
+    showToast('Error al iniciar chat');
+  }
+}
+
+// Buscar proveedores cuando se abre la pantalla de búsqueda
+document.addEventListener('DOMContentLoaded', () => {
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    searchInput.addEventListener('focus', () => {
+      if (!searchInput.dataset.loaded) {
+        buscarProveedores('');
+        searchInput.dataset.loaded = '1';
+      }
+    });
+  }
+});
 
 function toggleChip(el) {
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
