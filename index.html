@@ -5814,8 +5814,9 @@ async function rechazarSolicitud(chatId) {
     cargarSolicitudesProv();
   } catch(e) { showToast('Error'); }
 }
+const _origProvNav = window.provNav || function(){};
 window.provNav = function(screenId, btnId) {
-  if (_origProvNav) _origProvNav(screenId, btnId);
+  _origProvNav(screenId, btnId);
   if (screenId === 's-prov-chat') {
     setTimeout(() => { cargarChatsProv(); cargarSolicitudesProv(); }, 300);
   }
