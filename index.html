@@ -3829,12 +3829,22 @@ function connectSocket() {
   });
 
   // Proveedor recibe notificación de nueva solicitud en tiempo real
-  socket.on('nueva_solicitud', () => {
+  socket.on('nueva_solicitud', ({ chat_id, comprador_nombre, mensaje } = {}) => {
+    // Mostrar siempre — el proveedor puede estar en cualquier pantalla
+    const nombre = comprador_nombre || 'Alguien';
+    showToast('📩 ' + nombre + ' quiere conectar contigo');
+
+    // Badge en el tab de solicitudes
+    const badge = document.querySelector('#chat-tab-req span, #prov-chat-tab-req span');
+    if (badge) badge.style.display = 'block';
+
+    // Badge general de notificaciones
+    const notifBadge = document.getElementById('notif-badge');
+    if (notifBadge) notifBadge.style.display = 'block';
+
+    // Agregar a la bandeja de solicitudes en tiempo real si el proveedor está en esa pantalla
     if (currentMode === 'prov') {
       cargarSolicitudesProv();
-      const badge = document.querySelector('#chat-tab-req span, #prov-chat-tab-req span');
-      if (badge) badge.style.display = 'block';
-      showToast('Nueva solicitud de conexión');
     }
   });
 }
@@ -5902,10 +5912,15 @@ async function cargarSolicitudesProv() {
   try {
     const sols = await apiCall('GET', '/chat/solicitudes/pendientes', null, token);
     const pane = document.getElementById('prov-chat-pane-req');
-    if (!pane || sols.length === 0) return;
+    if (!pane) return;
 
-    // Limpiar solicitudes hardcodeadas y agregar las reales al inicio
-    const realSols = sols.map((s, i) => {
+    // Limpiar container previo para evitar duplicados
+    const prev = document.getElementById('prov-sols-container');
+    if (prev) prev.remove();
+
+    if (sols.length === 0) return;
+
+    const realSols = sols.map(s => {
       const comp     = s.comprador || {};
       const nombre   = comp.nombre || 'Comprador';
       const initials = nombre.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
@@ -5926,14 +5941,14 @@ async function cargarSolicitudesProv() {
       </div>`;
     }).join('');
 
-    // Insertar al inicio del pane
     const container = document.createElement('div');
+    container.id = 'prov-sols-container';
     container.innerHTML = realSols;
     pane.insertBefore(container, pane.firstChild);
 
     // Badge en tab solicitudes
     const badge = document.querySelector('#prov-chat-tab-req span');
-    if (badge && sols.length > 0) badge.style.display = 'block';
+    if (badge) badge.style.display = 'block';
   } catch(e) { console.warn(e); }
 }
 
