@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>¡Ven Ya!</title>
+<!-- Socket.io -->
+<script src="https://cdn.socket.io/4.6.2/socket.io.min.js"></script>
 <!-- Google Identity Services SDK -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
@@ -1357,7 +1359,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#DDDCDB;min
       <button onclick="toggleQuoteBox('buyer')" style="width:32px;height:32px;border-radius:8px;background:var(--gray-l);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;" title="Cotizar">
         <svg class="ico" viewBox="0 0 24 24" width="15" height="15"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
       </button>
-      <input id="buyer-msg-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')sendMsg('buyer')">
+      <input id="buyer-msg-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')sendMsg('buyer')" oninput="handleTyping('buyer')">
       <button class="send-btn" onclick="sendMsg('buyer')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
     </div>
   </div>
@@ -1779,7 +1781,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#DDDCDB;min
       <button onclick="toggleQuoteBox('prov')" style="width:32px;height:32px;border-radius:8px;background:var(--gray-l);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;" title="Cotizar">
         <svg class="ico" viewBox="0 0 24 24" width="15" height="15"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
       </button>
-      <input id="prov-msg-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')sendMsg('prov')">
+      <input id="prov-msg-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')sendMsg('prov')" oninput="handleTyping('prov')">
       <button class="send-btn" onclick="sendMsg('prov')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
     </div>
   </div>
@@ -3716,25 +3718,211 @@ function openProvBuyerProfile(initials, name, loc) {
 }
 
 // ─── Chat send message ───
-function sendMsg(who) {
-  const inputId = who === 'buyer' ? 'buyer-msg-input' : 'prov-msg-input';
-  const msgsId  = who === 'buyer' ? 's-buyer-chatconv' : 's-prov-chatconv';
-  const input = document.getElementById(inputId);
-  if (!input || !input.value.trim()) return;
-  const text = input.value.trim();
-  input.value = '';
-  const msgsEl = document.querySelector('#' + msgsId + ' .msgs');
-  if (!msgsEl) return;
-  const now = new Date();
+// ══════════════════════════════════════════
+// CHAT EN TIEMPO REAL — Socket.io
+// ══════════════════════════════════════════
+
+const SOCKET_URL = 'https://ven-ya-backend-production.up.railway.app';
+let socket = null;
+let _currentChatId = null;
+
+// Conectar Socket.io cuando el usuario inicia sesión
+function connectSocket() {
+  const token = localStorage.getItem('ven_ya_token');
+  if (!token || socket) return;
+
+  socket = io(SOCKET_URL, {
+    auth: { token },
+    transports: ['websocket', 'polling']
+  });
+
+  socket.on('connect', () => {
+    console.log('🟢 Socket conectado');
+  });
+
+  socket.on('disconnect', () => {
+    console.log('🔴 Socket desconectado');
+    socket = null;
+  });
+
+  // Recibir mensaje nuevo en tiempo real
+  socket.on('new_message', (msg) => {
+    const who = window._currentMode || currentMode;
+    const msgsId = who === 'buyer' ? 'buyer-msgs' : 'prov-msgs';
+    const msgsEl = document.getElementById(msgsId);
+    if (!msgsEl) return;
+
+    // Solo mostrar si es del otro usuario (los propios ya se muestran al enviar)
+    const myId = window._currentUser?.id;
+    if (msg.de_user_id === myId) return;
+
+    appendMessage(msgsEl, msg.texto, 'in', msg.created_at);
+
+    // Badge de notificación si no estamos en esa pantalla
+    const activeScreen = document.querySelector('.screen.active');
+    if (!activeScreen || (!activeScreen.id.includes('chatconv'))) {
+      const badge = document.getElementById('notif-badge');
+      if (badge) badge.style.display = 'block';
+    }
+  });
+
+  // Indicador "escribiendo..."
+  socket.on('user_typing', ({ is_typing }) => {
+    const who = currentMode;
+    const statusEl = document.getElementById(who === 'buyer' ? 'chat-status' : 'prov-conv-status');
+    if (statusEl) {
+      statusEl.textContent = is_typing ? 'Escribiendo...' : 'En línea';
+    }
+  });
+
+  socket.on('connect_error', (e) => {
+    console.warn('Socket error:', e.message);
+  });
+}
+
+// Agregar mensaje al chat visualmente
+function appendMessage(msgsEl, text, direction, time) {
+  const now = time ? new Date(time) : new Date();
   const t = now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
   const div = document.createElement('div');
-  div.className = 'msg msg-out';
-  div.innerHTML = '<div class="bubble">' + text + '</div><div class="msg-time">' + t + '</div>';
+  div.className = 'msg msg-' + direction;
+  div.innerHTML = '<div class="bubble">' + escapeHtml(text) + '</div><div class="msg-time">' + t + '</div>';
   msgsEl.appendChild(div);
   msgsEl.scrollTop = msgsEl.scrollHeight;
-  // Free plan: track message count
-  // message sent
 }
+
+function escapeHtml(text) {
+  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Abrir chat con un proveedor/comprador
+async function openChat(chatId, contactName, contactInitials) {
+  _currentChatId = chatId;
+
+  // Unirse a la sala del chat
+  if (socket) socket.emit('join_chat', chatId);
+
+  // Actualizar UI con nombre del contacto
+  const who = currentMode;
+  const nameEl = document.getElementById(who === 'buyer' ? 'buyer-conv-name' : 'prov-conv-name');
+  const avEl   = document.getElementById(who === 'buyer' ? 'buyer-conv-av' : 'prov-conv-av');
+  if (nameEl) nameEl.textContent = contactName || 'Contacto';
+  if (avEl)   avEl.textContent   = contactInitials || '?';
+
+  // Cargar historial de mensajes
+  const token = localStorage.getItem('ven_ya_token');
+  if (!token || !chatId) return;
+
+  try {
+    const msgs = await apiCall('GET', '/chat/' + chatId + '/mensajes', null, token);
+    const msgsId = who === 'buyer' ? 'buyer-msgs' : 'prov-msgs';
+    const msgsEl = document.getElementById(msgsId);
+    if (!msgsEl) return;
+
+    // Limpiar mensajes anteriores excepto los fijos del prototipo
+    const existingMsgs = msgsEl.querySelectorAll('.msg');
+    existingMsgs.forEach(m => m.remove());
+
+    // Renderizar historial
+    const myId = window._currentUser?.id;
+    msgs.forEach(msg => {
+      const dir = msg.de_user_id === myId ? 'out' : 'in';
+      appendMessage(msgsEl, msg.texto || '', dir, msg.created_at);
+    });
+  } catch(e) {
+    console.warn('Error cargando mensajes:', e);
+  }
+}
+
+// Enviar mensaje
+function sendMsg(who) {
+  const inputId = who === 'buyer' ? 'buyer-msg-input' : 'prov-msg-input';
+  const msgsId  = who === 'buyer' ? 'buyer-msgs' : 'prov-msgs';
+  const input   = document.getElementById(inputId);
+  if (!input || !input.value.trim()) return;
+
+  const text  = input.value.trim();
+  input.value = '';
+
+  const msgsEl = document.getElementById(msgsId);
+  if (msgsEl) appendMessage(msgsEl, text, 'out');
+
+  // Enviar por Socket.io si hay chat activo
+  if (socket && _currentChatId) {
+    socket.emit('send_message', { chat_id: _currentChatId, texto: text });
+    socket.emit('typing', { chat_id: _currentChatId, is_typing: false });
+  } else {
+    // Fallback HTTP si no hay socket
+    const token = localStorage.getItem('ven_ya_token');
+    if (token && _currentChatId) {
+      apiCall('POST', '/chat/' + _currentChatId + '/mensajes', { texto: text }, token)
+        .catch(e => console.warn('Error enviando mensaje:', e));
+    }
+  }
+}
+
+// Indicador de escritura
+function handleTyping(who) {
+  if (socket && _currentChatId) {
+    socket.emit('typing', { chat_id: _currentChatId, is_typing: true });
+    clearTimeout(window._typingTimer);
+    window._typingTimer = setTimeout(() => {
+      socket.emit('typing', { chat_id: _currentChatId, is_typing: false });
+    }, 1500);
+  }
+}
+
+// Cargar lista de chats
+async function loadChatList() {
+  const token = localStorage.getItem('ven_ya_token');
+  if (!token) return;
+  try {
+    const chats = await apiCall('GET', '/chat', null, token);
+    const who = currentMode;
+    const listEl = document.getElementById(who === 'buyer' ? 'chat-pane-ct' : 'prov-chat-pane-ct');
+    if (!listEl || chats.length === 0) return;
+
+    // Agregar chats reales al principio
+    chats.forEach(chat => {
+      const existing = document.getElementById('chat-' + chat.id);
+      if (existing) return; // ya está
+
+      const div = document.createElement('div');
+      div.className = 'chat-item';
+      div.id = 'chat-' + chat.id;
+      const contacto = chat.contacto;
+      const initials = (contacto.nombre || '?').split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
+      div.innerHTML = `
+        <div class="ch-av" style="background:var(--org-l);color:var(--org);">${initials}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <div class="chat-name">${contacto.nombre || 'Usuario'}</div>
+          </div>
+          <div class="chat-prev">${chat.ultimo_mensaje || 'Iniciar conversación'}</div>
+        </div>
+        ${chat.no_leidos > 0 ? '<div style="background:var(--org);color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:2px 7px;flex-shrink:0;">' + chat.no_leidos + '</div>' : ''}
+      `;
+      div.onclick = () => {
+        openChat(chat.id, contacto.nombre, initials);
+        const screen = who === 'buyer' ? 's-buyer-chatconv' : 's-prov-chatconv';
+        go(who === 'buyer' ? 's-buyer-chat' : 's-prov-chat', screen);
+      };
+      listEl.insertBefore(div, listEl.firstChild);
+    });
+  } catch(e) {
+    console.warn('Error cargando chats:', e);
+  }
+}
+
+// Conectar socket al iniciar sesión
+const _origGoToHome = window.goToHome;
+window.goToHome = function() {
+  if (_origGoToHome) _origGoToHome();
+  setTimeout(() => {
+    connectSocket();
+    loadChatList();
+  }, 800);
+};
 
 let msgCount = 3;
 function updateMsgCounter() {
