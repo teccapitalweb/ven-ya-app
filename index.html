@@ -3802,28 +3802,28 @@ async function openChat(chatId, contactName, contactInitials) {
   // Unirse a la sala del chat
   if (socket) socket.emit('join_chat', chatId);
 
-  // Actualizar UI con nombre del contacto
+  // Actualizar header del chat con nombre e iniciales reales
   const who = currentMode;
-  const nameEl = document.getElementById(who === 'buyer' ? 'buyer-conv-name' : 'prov-conv-name');
-  const avEl   = document.getElementById(who === 'buyer' ? 'buyer-conv-av' : 'prov-conv-av');
-  if (nameEl) nameEl.textContent = contactName || 'Contacto';
-  if (avEl)   avEl.textContent   = contactInitials || '?';
+  const screenId = who === 'buyer' ? 's-buyer-chatconv' : 's-prov-chatconv';
+  const chAv   = document.querySelector('#' + screenId + ' .ch-av');
+  const chName = document.querySelector('#' + screenId + ' .ch-name');
+  if (chAv)   chAv.textContent   = contactInitials || '?';
+  if (chName) chName.textContent = contactName     || 'Contacto';
 
   // Cargar historial de mensajes
   const token = localStorage.getItem('ven_ya_token');
   if (!token || !chatId) return;
 
   try {
-    const msgs = await apiCall('GET', '/chat/' + chatId + '/mensajes', null, token);
+    const msgs  = await apiCall('GET', '/chat/' + chatId + '/mensajes', null, token);
     const msgsId = who === 'buyer' ? 'buyer-msgs' : 'prov-msgs';
     const msgsEl = document.getElementById(msgsId);
     if (!msgsEl) return;
 
-    // Limpiar mensajes anteriores excepto los fijos del prototipo
-    const existingMsgs = msgsEl.querySelectorAll('.msg');
-    existingMsgs.forEach(m => m.remove());
+    // Limpiar mensajes hardcodeados del prototipo
+    msgsEl.querySelectorAll('.msg').forEach(m => m.remove());
 
-    // Renderizar historial
+    // Renderizar historial desde la BD
     const myId = window._currentUser?.id;
     msgs.forEach(msg => {
       const dir = msg.de_user_id === myId ? 'out' : 'in';
@@ -5440,26 +5440,31 @@ async function buscarConFiltros() {
     }
 
     window._proveedoresData = proveedores;
-    listEl.innerHTML = proveedores.map((p, i) => {
-      const initials  = (p.nombre||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-      const stars     = p.calificacion > 0 ? '★'.repeat(Math.round(p.calificacion)) + ' ' + Number(p.calificacion).toFixed(1) + ' (' + p.total_resenas + ')' : 'Nuevo';
-      const dist      = p.distancia_km ? ' · ' + p.distancia_km + ' km' : '';
-      const planBadge = p.plan !== 'gratuito' ? ' <span style="font-size:9px;font-weight:700;background:var(--org-l);color:var(--org2);padding:2px 6px;border-radius:4px;">' + p.plan.toUpperCase() + '</span>' : '';
-      const foto      = p.foto_url ? '<img src="'+p.foto_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">' : initials;
-      return '<div style="border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;background:#fff;">'
-        + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">'
-        + '<div style="width:52px;height:52px;min-width:52px;border-radius:13px;background:var(--org-l);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:var(--org);overflow:hidden;">' + foto + '</div>'
+    const cards = proveedores.map((p, idx) => {
+      const initials = (p.nombre||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      const cal      = Number(p.calificacion) || 0;
+      const stars    = cal > 0 ? '★ ' + cal.toFixed(1) + ' (' + (p.total_resenas||0) + ')' : 'Nuevo';
+      const dist     = p.distancia_km ? p.distancia_km + ' km' : '';
+      const ubic     = [p.municipio, p.estado, dist].filter(Boolean).join(', ');
+      const fotoCss  = p.foto_url ? 'background:url('+p.foto_url+') center/cover no-repeat' : 'background:var(--org-l)';
+      const fotoTxt  = p.foto_url ? '' : initials;
+      const plan     = p.plan !== 'gratuito' ? '<span style="margin-left:5px;font-size:9px;font-weight:700;background:var(--org-l);color:var(--org2);padding:2px 7px;border-radius:99px;">'+p.plan.toUpperCase()+'</span>' : '';
+      const bio      = p.bio ? p.bio.substring(0,90)+(p.bio.length>90?'...':'') : '';
+      return '<div class="pcard" style="border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;background:#fff;">'
+        + '<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;">'
+        + '<div style="width:50px;height:50px;flex-shrink:0;border-radius:12px;'+fotoCss+';display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:var(--org);">'+fotoTxt+'</div>'
         + '<div style="flex:1;min-width:0;">'
-        + '<div style="font-size:14px;font-weight:700;color:var(--text);">' + (p.nombre||'Proveedor') + planBadge + '</div>'
-        + '<div style="font-size:11px;color:var(--text3);margin-top:2px;">' + (p.estado||'') + (p.municipio?', '+p.municipio:'') + dist + '</div>'
-        + '<div style="font-size:11px;color:var(--org2);margin-top:3px;">' + stars + '</div>'
+        + '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px;">'+(p.nombre||'Proveedor')+plan+'</div>'
+        + '<div style="font-size:11px;color:var(--text3);margin-bottom:2px;">'+ubic+'</div>'
+        + '<div style="font-size:11px;color:var(--org2);">'+stars+'</div>'
         + '</div></div>'
-        + (p.bio ? '<div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6;">' + p.bio.substring(0,100) + (p.bio.length>100?'...':'') + '</div>' : '')
+        + (bio ? '<div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px;">'+bio+'</div>' : '')
         + '<div style="display:flex;gap:8px;">'
-        + '<button onclick="verPerfilReal2('+i+')" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:var(--text);">Ver perfil</button>'
-        + '<button onclick="conectarConProveedor2('+i+')" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--org);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#fff;">Conectar</button>'
+        + '<button onclick="verPerfilReal2('+idx+')" style="flex:1;padding:9px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:var(--text);">Ver perfil</button>'
+        + '<button onclick="conectarConProveedor2('+idx+')" style="flex:1;padding:9px;border-radius:10px;border:none;background:var(--org);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#fff;">Conectar</button>'
         + '</div></div>';
-    }).join('');
+    });
+    listEl.innerHTML = cards.join('');
 
     // Mostrar punto de filtro activo
     const dot = document.getElementById('filter-dot');
@@ -5651,6 +5656,113 @@ function toggleChip(el) {
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
   el.classList.add('on');
 }
+
+// ══════════════════════════════════════════
+// PUNTO 3: Solicitud de conexión → bandeja proveedor
+// ══════════════════════════════════════════
+// Cuando el comprador da "Conectar", se registra como solicitud
+// y el proveedor la ve en su bandeja
+async function conectarConProveedor(proveedorId, nombre) {
+  const token = localStorage.getItem('ven_ya_token');
+  if (!token) { showToast('Inicia sesión primero'); return; }
+  try {
+    showToast('Conectando...');
+    const chat = await apiCall('POST', '/chat/iniciar', { proveedor_id: proveedorId }, token);
+    _currentChatId = chat.id;
+    if (socket) socket.emit('join_chat', chat.id);
+
+    // Actualizar header del chat
+    const initials = (nombre||'?').substring(0,2).toUpperCase();
+    const chAv   = document.querySelector('#s-buyer-chatconv .ch-av');
+    const chName = document.querySelector('#s-buyer-chatconv .ch-name');
+    if (chAv)   chAv.textContent   = initials;
+    if (chName) chName.textContent = nombre;
+
+    go('s-search-results', 's-buyer-chatconv');
+    openChat(chat.id, nombre, initials);
+
+    // Recargar lista de chats del proveedor para que aparezca la solicitud
+    if (socket) socket.emit('nueva_solicitud', { proveedor_id: proveedorId, chat_id: chat.id });
+  } catch(e) {
+    showToast('Error: ' + (e.message||'intenta de nuevo'));
+  }
+}
+
+// ══════════════════════════════════════════
+// PUNTO 5: Proveedor ve nombre del comprador en chat
+// ══════════════════════════════════════════
+// Al abrir chat como proveedor, carga datos del comprador
+async function abrirChatProveedor(chatId) {
+  const token = localStorage.getItem('ven_ya_token');
+  if (!token) return;
+  try {
+    const chats = await apiCall('GET', '/chat', null, token);
+    const chat  = chats.find(c => c.id === chatId);
+    if (chat && chat.contacto) {
+      const nombre   = chat.contacto.nombre || 'Comprador';
+      const initials = nombre.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      const chAv   = document.querySelector('#s-prov-chatconv .ch-av');
+      const chName = document.querySelector('#s-prov-chatconv .ch-name');
+      if (chAv)   chAv.textContent   = initials;
+      if (chName) chName.textContent = nombre;
+      openChat(chatId, nombre, initials);
+    }
+  } catch(e) { console.warn(e); }
+}
+
+// ══════════════════════════════════════════
+// PUNTO 6: Control de mensajes — solo entre conectados
+// Comentarios en publicaciones: todos pueden
+// Mensajes directos: solo si hay chat iniciado
+// ══════════════════════════════════════════
+// La lógica de chat ya requiere chat.iniciar antes de enviar mensajes
+// Así que mensajes directos solo fluyen entre quienes se conectaron
+
+// Cargar chats del proveedor al entrar al home
+async function cargarChatsProv() {
+  const token = localStorage.getItem('ven_ya_token');
+  if (!token) return;
+  try {
+    const chats  = await apiCall('GET', '/chat', null, token);
+    const listEl = document.getElementById('prov-chat-pane-ct');
+    if (!listEl || chats.length === 0) return;
+
+    chats.forEach(chat => {
+      if (document.getElementById('chat-prov-' + chat.id)) return;
+      const contacto  = chat.contacto || {};
+      const nombre    = contacto.nombre || 'Comprador';
+      const initials  = nombre.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      const noLeidos  = chat.no_leidos || 0;
+      const div = document.createElement('div');
+      div.className = 'chat-item';
+      div.id = 'chat-prov-' + chat.id;
+      div.innerHTML = `
+        <div class="ch-av" style="background:var(--org-l);color:var(--org);">${initials}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;justify-content:space-between;">
+            <div class="chat-name">${nombre}</div>
+            ${noLeidos > 0 ? '<div style="background:var(--org);color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:1px 7px;">' + noLeidos + '</div>' : ''}
+          </div>
+          <div class="chat-prev">${chat.ultimo_mensaje || 'Nueva solicitud'}</div>
+        </div>`;
+      div.onclick = () => {
+        _currentChatId = chat.id;
+        abrirChatProveedor(chat.id);
+        go('s-prov-chat', 's-prov-chatconv');
+      };
+      listEl.insertBefore(div, listEl.firstChild);
+    });
+  } catch(e) { console.warn('Error chats proveedor:', e); }
+}
+
+// Llamar cargarChatsProv cuando el proveedor va al home
+const _origProvNav = window.provNav;
+window.provNav = function(screenId, btnId) {
+  if (_origProvNav) _origProvNav(screenId, btnId);
+  if (screenId === 's-prov-chat') {
+    setTimeout(cargarChatsProv, 300);
+  }
+};
 </script>
 
 <!-- ══════════════════════════════════════════ -->
