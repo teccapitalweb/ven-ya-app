@@ -5619,29 +5619,52 @@ function verPerfilReal2(i) {
 
 function conectarConProveedor2(i) {
   const p = (window._proveedoresData || [])[i];
-  if (p) conectarConProveedor(p.id, p.nombre || 'Proveedor');
+  if (p) enviarSolicitud(p.id, p.nombre || 'Proveedor');
 }
 
-async function conectarConProveedor(proveedorId, nombre) {
+// Enviar solicitud de conexión — NO abre chat
+// El chat se habilita cuando el proveedor acepta
+async function enviarSolicitud(proveedorId, nombre) {
   const token = localStorage.getItem('ven_ya_token');
   if (!token) { showToast('Inicia sesión primero'); return; }
   try {
-    showToast('Iniciando chat...');
+    // Crear el chat en estado "pendiente" — solo para registrar la solicitud
+    await apiCall('POST', '/chat/iniciar', { proveedor_id: proveedorId }, token);
+    // Notificar al proveedor por socket
+    if (socket) socket.emit('nueva_solicitud', { proveedor_id: proveedorId });
+    showToast('Solicitud enviada a ' + nombre);
+    // Cambiar botón a "Solicitud enviada"
+    const btns = document.querySelectorAll('#search-result-list button');
+    btns.forEach(btn => {
+      if (btn.onclick && btn.onclick.toString().includes(proveedorId)) {
+        btn.textContent = 'Solicitud enviada';
+        btn.style.background = '#E5E7EB';
+        btn.style.color = '#6B7280';
+        btn.disabled = true;
+      }
+    });
+  } catch(e) {
+    showToast('Error al enviar solicitud');
+  }
+}
+
+// conectarConProveedor — se llama SOLO cuando el proveedor ya aceptó
+async function conectarConProveedor(proveedorId, nombre) {
+  const token = localStorage.getItem('ven_ya_token');
+  if (!token) return;
+  try {
     const chat = await apiCall('POST', '/chat/iniciar', { proveedor_id: proveedorId }, token);
     _currentChatId = chat.id;
     if (socket) socket.emit('join_chat', chat.id);
-
-    // Actualizar header del chat con nombre e iniciales
     const initials = (nombre||'?').substring(0,2).toUpperCase();
     const chAv   = document.querySelector('#s-buyer-chatconv .ch-av');
     const chName = document.querySelector('#s-buyer-chatconv .ch-name');
     if (chAv)   chAv.textContent   = initials;
     if (chName) chName.textContent = nombre;
-
     go('s-search-results', 's-buyer-chatconv');
     openChat(chat.id, nombre, initials);
   } catch(e) {
-    showToast('Error al iniciar chat: ' + (e.message||''));
+    showToast('Error al abrir chat');
   }
 }
 
@@ -5661,37 +5684,6 @@ document.addEventListener('DOMContentLoaded', () => {
 function toggleChip(el) {
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
   el.classList.add('on');
-}
-
-// ══════════════════════════════════════════
-// PUNTO 3: Solicitud de conexión → bandeja proveedor
-// ══════════════════════════════════════════
-// Cuando el comprador da "Conectar", se registra como solicitud
-// y el proveedor la ve en su bandeja
-async function conectarConProveedor(proveedorId, nombre) {
-  const token = localStorage.getItem('ven_ya_token');
-  if (!token) { showToast('Inicia sesión primero'); return; }
-  try {
-    showToast('Conectando...');
-    const chat = await apiCall('POST', '/chat/iniciar', { proveedor_id: proveedorId }, token);
-    _currentChatId = chat.id;
-    if (socket) socket.emit('join_chat', chat.id);
-
-    // Actualizar header del chat
-    const initials = (nombre||'?').substring(0,2).toUpperCase();
-    const chAv   = document.querySelector('#s-buyer-chatconv .ch-av');
-    const chName = document.querySelector('#s-buyer-chatconv .ch-name');
-    if (chAv)   chAv.textContent   = initials;
-    if (chName) chName.textContent = nombre;
-
-    go('s-search-results', 's-buyer-chatconv');
-    openChat(chat.id, nombre, initials);
-
-    // Recargar lista de chats del proveedor para que aparezca la solicitud
-    if (socket) socket.emit('nueva_solicitud', { proveedor_id: proveedorId, chat_id: chat.id });
-  } catch(e) {
-    showToast('Error: ' + (e.message||'intenta de nuevo'));
-  }
 }
 
 // ══════════════════════════════════════════
@@ -5761,12 +5753,71 @@ async function cargarChatsProv() {
   } catch(e) { console.warn('Error chats proveedor:', e); }
 }
 
-// Llamar cargarChatsProv cuando el proveedor va al home
-const _origProvNav = window.provNav;
+// Cargar solicitudes pendientes del proveedor
+async function cargarSolicitudesProv() {
+  const token = localStorage.getItem('ven_ya_token');
+  if (!token) return;
+  try {
+    const sols = await apiCall('GET', '/chat/solicitudes/pendientes', null, token);
+    const pane = document.getElementById('prov-chat-pane-req');
+    if (!pane || sols.length === 0) return;
+
+    // Limpiar solicitudes hardcodeadas y agregar las reales al inicio
+    const realSols = sols.map((s, i) => {
+      const comp     = s.comprador || {};
+      const nombre   = comp.nombre || 'Comprador';
+      const initials = nombre.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      const loc      = [comp.municipio, comp.estado].filter(Boolean).join(', ');
+      return `<div style="border:1px solid #E5E7EB;border-radius:13px;padding:14px;margin-bottom:10px;background:#fff;">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+          <div style="width:40px;height:40px;border-radius:99px;background:#FFF4EE;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#F97316;flex-shrink:0;">${initials}</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#111827;">${nombre}</div>
+            <div style="font-size:11px;color:#9CA3AF;">${loc}</div>
+          </div>
+          <span style="margin-left:auto;font-size:10px;font-weight:700;background:#FFF4EE;color:#EA6C10;padding:2px 8px;border-radius:99px;">Nueva</span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="rechazarSolicitud('${s.id}')" style="flex:1;padding:9px;border-radius:10px;border:1.5px solid #E5E7EB;background:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#6B7280;">Rechazar</button>
+          <button onclick="aceptarSolicitud('${s.id}','${nombre}')" style="flex:1;padding:9px;border-radius:10px;border:none;background:#F97316;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#fff;">Aceptar</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Insertar al inicio del pane
+    const container = document.createElement('div');
+    container.innerHTML = realSols;
+    pane.insertBefore(container, pane.firstChild);
+
+    // Badge en tab solicitudes
+    const badge = document.querySelector('#prov-chat-tab-req span');
+    if (badge && sols.length > 0) badge.style.display = 'block';
+  } catch(e) { console.warn(e); }
+}
+
+async function aceptarSolicitud(chatId, nombre) {
+  const token = localStorage.getItem('ven_ya_token');
+  try {
+    await apiCall('PUT', '/chat/' + chatId + '/aceptar', {}, token);
+    showToast('Conectado con ' + nombre);
+    // Recargar solicitudes y chats
+    cargarSolicitudesProv();
+    cargarChatsProv();
+  } catch(e) { showToast('Error al aceptar'); }
+}
+
+async function rechazarSolicitud(chatId) {
+  const token = localStorage.getItem('ven_ya_token');
+  try {
+    await apiCall('PUT', '/chat/' + chatId + '/rechazar', {}, token);
+    showToast('Solicitud rechazada');
+    cargarSolicitudesProv();
+  } catch(e) { showToast('Error'); }
+}
 window.provNav = function(screenId, btnId) {
   if (_origProvNav) _origProvNav(screenId, btnId);
   if (screenId === 's-prov-chat') {
-    setTimeout(cargarChatsProv, 300);
+    setTimeout(() => { cargarChatsProv(); cargarSolicitudesProv(); }, 300);
   }
 };
 </script>
