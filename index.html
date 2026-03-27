@@ -3438,7 +3438,9 @@ var _user = {
 
 
 function syncProfiles() {
-  // Buyer profile
+  const u = window._currentUser || {};
+
+  // Perfil COMPRADOR
   var bAv   = document.getElementById('buyer-av');
   var bName = document.getElementById('buyer-name');
   var bLoc  = document.getElementById('buyer-loc');
@@ -3446,22 +3448,22 @@ function syncProfiles() {
   if (bName) bName.textContent = _user.name;
   if (bLoc)  bLoc.textContent  = _user.location;
 
-  // Provider my-profile name + location
+  // Perfil PROVEEDOR — usar datos del negocio, NO del comprador
   var pName = document.getElementById('prov-myprofile-name');
   var pLoc  = document.getElementById('prov-myprofile-loc');
-  if (pName) pName.textContent = _provProfileActivated ? _user.bizName : _user.name;
-  if (pLoc)  pLoc.textContent  = _user.location;
+  var pBio  = document.getElementById('prov-bio-text');
 
-  // Bio del proveedor
-  var pBio = document.getElementById('prov-bio-text');
-  if (pBio && window._currentUser?.bio) {
-    pBio.textContent = window._currentUser.bio;
-    pBio.style.color = 'var(--text2)';
-  }
+  const bizName = u.nombre_negocio || _user.bizName || _user.name;
+  const bizLoc  = [u.municipio_negocio || u.municipio, u.estado_negocio || u.estado].filter(Boolean).join(', ') || _user.location;
+  const bizBio  = u.bio_negocio || u.bio || '';
 
-  // Provider avatar initials
+  if (pName) pName.textContent = bizName;
+  if (pLoc)  pLoc.textContent  = bizLoc;
+  if (pBio && bizBio) { pBio.textContent = bizBio; pBio.style.color = 'var(--text2)'; }
+
+  // Avatar proveedor
   var pAv = document.getElementById('prov-av-initials') || document.getElementById('prov-avatar-circle');
-  if (pAv) pAv.textContent = _user.initials;
+  if (pAv && !u.foto_negocio) pAv.textContent = bizName.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
 
   // Provider edit form
   var pEditBiz = document.getElementById('prov-edit-bizname');
@@ -3909,6 +3911,46 @@ function connectSocket() {
 
   socket.on('connect_error', (e) => {
     console.warn('Socket error:', e.message);
+  });
+
+  // Comprador recibe notificación cuando el proveedor acepta
+  socket.on('solicitud_aceptada', ({ chat_id, proveedor_nombre, mensaje }) => {
+    // Badge de notificación
+    const badge = document.getElementById('notif-badge');
+    if (badge) badge.style.display = 'block';
+
+    // Toast con opción de abrir chat
+    showToast('✓ ' + (proveedor_nombre || 'El proveedor') + ' aceptó tu solicitud');
+
+    // Agregar notificación visible en pantalla de notificaciones
+    const notifList = document.getElementById('buyer-notif-list') || document.querySelector('#s-notif .scroll');
+    if (notifList) {
+      const div = document.createElement('div');
+      div.className = 'notif-item unread';
+      div.style.cssText = 'padding:14px;border-bottom:1px solid var(--border);cursor:pointer;';
+      div.innerHTML = '<div style="display:flex;gap:10px;align-items:flex-start;">'
+        + '<div style="width:36px;height:36px;border-radius:99px;background:var(--org-l);display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+        + '<svg class="ico" viewBox="0 0 24 24" width="16" height="16" style="color:var(--org)"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>'
+        + '<div><div style="font-size:13px;font-weight:700;color:var(--text);">¡Solicitud aceptada!</div>'
+        + '<div style="font-size:12px;color:var(--text2);">' + mensaje + '</div>'
+        + '<div style="font-size:11px;color:var(--text3);margin-top:3px;">Ahora</div></div></div>';
+      div.onclick = () => { _currentChatId = chat_id; go('s-notif', 's-buyer-chatconv'); };
+      notifList.insertBefore(div, notifList.firstChild);
+    }
+
+    // Habilitar el chat — cambiar botón de "Solicitud enviada" a "Mensaje"
+    window._chatsAceptados = window._chatsAceptados || {};
+    window._chatsAceptados[chat_id] = true;
+  });
+
+  // Proveedor recibe notificación de nueva solicitud en tiempo real
+  socket.on('nueva_solicitud', () => {
+    if (currentMode === 'prov') {
+      cargarSolicitudesProv();
+      const badge = document.querySelector('#chat-tab-req span, #prov-chat-tab-req span');
+      if (badge) badge.style.display = 'block';
+      showToast('Nueva solicitud de conexión');
+    }
   });
 }
 
@@ -5750,22 +5792,18 @@ function conectarConProveedor2(i) {
   if (p) enviarSolicitud(p.id, p.nombre || 'Proveedor');
 }
 
-// Enviar solicitud de conexión — NO abre chat
-// El chat se habilita cuando el proveedor acepta
 async function enviarSolicitud(proveedorId, nombre) {
   const token = localStorage.getItem('ven_ya_token');
   if (!token) { showToast('Inicia sesión primero'); return; }
   try {
-    // Crear el chat en estado "pendiente" — solo para registrar la solicitud
-    await apiCall('POST', '/chat/iniciar', { proveedor_id: proveedorId }, token);
-    // Notificar al proveedor por socket
-    if (socket) socket.emit('nueva_solicitud', { proveedor_id: proveedorId });
+    const chat = await apiCall('POST', '/chat/iniciar', { proveedor_id: proveedorId }, token);
+    // Notificar al proveedor por socket en tiempo real
+    if (socket) socket.emit('nueva_solicitud', { proveedor_id: proveedorId, chat_id: chat.id });
     showToast('Solicitud enviada a ' + nombre);
-    // Cambiar botón a "Solicitud enviada"
-    const btns = document.querySelectorAll('#search-result-list button');
-    btns.forEach(btn => {
+    // Cambiar el botón a "Solicitud enviada"
+    document.querySelectorAll('#search-result-list button').forEach(btn => {
       if (btn.onclick && btn.onclick.toString().includes(proveedorId)) {
-        btn.textContent = 'Solicitud enviada';
+        btn.textContent = '✓ Solicitud enviada';
         btn.style.background = '#E5E7EB';
         btn.style.color = '#6B7280';
         btn.disabled = true;
