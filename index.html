@@ -3427,6 +3427,13 @@ function syncProfiles() {
   if (pName) pName.textContent = _provProfileActivated ? _user.bizName : _user.name;
   if (pLoc)  pLoc.textContent  = _user.location;
 
+  // Bio del proveedor
+  var pBio = document.getElementById('prov-bio-text');
+  if (pBio && window._currentUser?.bio) {
+    pBio.textContent = window._currentUser.bio;
+    pBio.style.color = 'var(--text2)';
+  }
+
   // Provider avatar initials
   var pAv = document.getElementById('prov-av-initials') || document.getElementById('prov-avatar-circle');
   if (pAv) pAv.textContent = _user.initials;
