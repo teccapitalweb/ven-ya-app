@@ -1232,7 +1232,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#DDDCDB;min
       <div class="topbar-title">Mensajes</div>
       <div class="searchbar" style="margin-top:8px;margin-bottom:0;">
         <svg class="ico" viewBox="0 0 24 24" width="16" height="16" style="color:var(--text3);flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input placeholder="Buscar mensajes..." oninput="filterChatList(this.value,'buyer')">
+        <input placeholder="Buscar contactos..." oninput="filterChatList(this.value,'buyer')">
       </div>
     </div>
     <!-- Tabs: Contactos / Solicitudes -->
@@ -1924,10 +1924,9 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#DDDCDB;min
 
       <!-- Rendimiento del mes -->
       <div class="sh"><span class="st">Rendimiento del mes</span></div>
-      <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:13px;margin-bottom:16px;">
-        <div class="bar-item"><div class="bar-hdr"><span>Aguacate Hass</span><span style="font-weight:700;">168 vistas</span></div><div class="bar-bg"><div class="bar-fg" style="width:82%;"></div></div></div>
-        <div class="bar-item"><div class="bar-hdr"><span>Fresa fresca</span><span style="font-weight:700;">96 vistas</span></div><div class="bar-bg"><div class="bar-fg" style="width:47%;background:var(--gray-d);"></div></div></div>
-        <div class="bar-item"><div class="bar-hdr"><span>Uva Red Globe</span><span style="font-weight:700;">78 vistas</span></div><div class="bar-bg"><div class="bar-fg" style="width:38%;background:var(--gray-d);"></div></div></div>
+      <div id="prov-rendimiento" style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px;text-align:center;color:var(--text3);">
+        <svg class="ico" viewBox="0 0 24 24" width="28" height="28" style="color:var(--border);margin-bottom:6px;display:block;margin-left:auto;margin-right:auto;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <div style="font-size:12px;">Publica productos para ver estad\u00edsticas aqu\u00ed</div>
       </div>
 
       <!-- Publicaciones -->
@@ -1969,32 +1968,20 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#DDDCDB;min
 
       <!-- Productos -->
       <div class="sh"><span class="st">Productos</span><button class="btn btn-p btn-xs" onclick="go('s-prov-myprofile','s-add-product')">+ Agregar</button></div>
-      <div style="border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:16px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-bottom:1px solid var(--border);">
-          <div><div style="font-size:13px;font-weight:700;color:var(--text);">Aguacate Hass</div><div style="font-size:11px;color:var(--text3);margin-top:1px;">Mayoreo · Min. 50 kg</div></div>
-          <div style="font-size:14px;font-weight:800;color:var(--org);">$28/kg</div>
+      <div id="prov-products-list" style="margin-bottom:16px;">
+        <div style="border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center;color:var(--text3);">
+          <svg class="ico" viewBox="0 0 24 24" width="28" height="28" style="color:var(--border);margin-bottom:6px;display:block;margin-left:auto;margin-right:auto;"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+          <div style="font-size:12px;">A\u00fan no tienes productos.<br>Toca "+ Agregar" para publicar el primero.</div>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-bottom:1px solid var(--border);">
-          <div><div style="font-size:13px;font-weight:700;color:var(--text);">Fresa fresca</div><div style="font-size:11px;color:var(--text3);margin-top:1px;">Mayoreo · Min. 20 kg</div></div>
-          <div style="font-size:14px;font-weight:800;color:var(--org);">$35/kg</div>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 14px;">
-          <div><div style="font-size:13px;font-weight:700;color:var(--text);">Mango Ataulfo</div><div style="font-size:11px;color:var(--text3);margin-top:1px;">Mayoreo · Min. 25 kg</div></div>
-          <div style="font-size:14px;font-weight:800;color:var(--org);">$22/kg</div>
+      </div>
+      <div class="sh"><span class="st">Rese\u00f1as</span><span id="prov-resenas-count" class="sl"></span></div>
+      <div id="prov-resenas-list" style="margin-bottom:16px;">
+        <div style="border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center;color:var(--text3);">
+          <svg class="ico" viewBox="0 0 24 24" width="28" height="28" style="color:var(--border);margin-bottom:6px;display:block;margin-left:auto;margin-right:auto;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <div style="font-size:12px;">A\u00fan no tienes rese\u00f1as. Las recibir\u00e1s cuando compradores califiquen su experiencia contigo.</div>
         </div>
       </div>
 
-      <div class="sh"><span class="st">Reseñas</span><span class="sl">Ver todas (128)</span></div>
-      <div style="border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div style="width:28px;height:28px;border-radius:99px;background:var(--org-l);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--org);">AL</div>
-            <span style="font-size:13px;font-weight:700;color:var(--text);">Ana López</span>
-          </div>
-          <div style="display:flex;gap:1px;"><svg viewBox="0 0 24 24" width="11" height="11" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" width="11" height="11" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" width="11" height="11" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" width="11" height="11" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" width="11" height="11" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
-        </div>
-        <p style="font-size:12px;color:var(--text2);line-height:1.55;">Excelente calidad y precio justo. Muy puntual con la entrega. Ya le compré 3 veces.</p>
-      </div>
       <!-- Cambiar rol -->
       <div class="sh" style="margin-top:2px;"><span class="st">Tipo de cuenta</span></div>
       <div style="border:1px solid var(--border);border-radius:13px;padding:13px 14px;margin-bottom:16px;">
@@ -3058,129 +3045,14 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#DDDCDB;min
       <button class="back-btn" onclick="goBack('s-saved')"><svg class="ico" viewBox="0 0 24 24" width="18" height="18"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Volver</button>
       <span class="topbar-title">Guardados</span>
     </div>
-    <div class="scroll pad" style="padding-top:12px;">
-      <div style="font-size:12px;color:var(--text3);margin-bottom:12px;">5 proveedores guardados</div>
-      <div class="pcard">
-        <div class="pav" style="background:var(--org-l);color:var(--org);">RF</div>
-        <div class="pinfo">
-          <div style="display:flex;align-items:center;gap:5px;"><div class="pname">Rancho El Fresno</div><svg class="ico" viewBox="0 0 24 24" width="11" height="11" style="color:var(--green);"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
-          <div class="ploc"><svg class="ico" viewBox="0 0 24 24" width="10" height="10"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Michoacan · 42 km</div>
-          <div class="pcat">Agricultura</div>
-          <div class="stars-row"><div class="stars"><svg viewBox="0 0 24 24" width="10" height="10" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" width="10" height="10" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" width="10" height="10" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" width="10" height="10" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" width="10" height="10" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><span style="font-size:11px;font-weight:700;color:var(--text);">4.9</span><span style="font-size:11px;color:var(--text3);">(128)</span>
-            <button onclick="go('s-saved','s-prov-profile')" style="flex:1;padding:7px;border-radius:8px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);margin-left:auto;">Ver perfil</button>
-          </div>
-        </div>
+    <div class="scroll pad" id="saved-list-content" style="padding-top:12px;">
+      <div class="saved-empty" style="text-align:center;padding:48px 20px;color:var(--text3);">
+        <svg class="ico" viewBox="0 0 24 24" width="40" height="40" style="color:var(--border);margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px;">Sin proveedores guardados</div>
+        <div style="font-size:12px;">Toca el corazón en el perfil de un proveedor para guardarlo aquí</div>
       </div>
-      <div class="pcard">
-        <div class="pav" style="background:var(--gray-l);color:var(--text2);">GN</div>
-        <div class="pinfo">
-          <div style="display:flex;align-items:center;gap:5px;"><div class="pname">Granja Los Nogales</div></div>
-          <div class="ploc"><svg class="ico" viewBox="0 0 24 24" width="10" height="10"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Jalisco · 15 km</div>
-          <div class="pcat">Animales</div>
-          <div class="stars-row"><div class="stars"><svg viewBox="0 0 24 24" width="10" height="10" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" width="10" height="10" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" width="10" height="10" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" width="10" height="10" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" width="10" height="10" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><span style="font-size:11px;font-weight:700;color:var(--text);">5.0</span><span style="font-size:11px;color:var(--text3);">(312)</span>
-            <button onclick="openProfile('GN','Granja Los Nogales','Zapopan, Jalisco','Animales','5.0','312')" style="flex:1;padding:7px;border-radius:8px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);margin-left:auto;">Ver perfil</button>
-          </div>
-        </div>
-      </div>
-      <div class="pcard">
-        <div class="pav" style="background:var(--gray-l);color:var(--text2);">BM</div>
-        <div class="pinfo">
-          <div class="pname">Berries Morelos</div>
-          <div class="ploc"><svg class="ico" viewBox="0 0 24 24" width="10" height="10"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Morelos · 28 km</div>
-          <div class="pcat">Agricultura</div>
-          <div class="stars-row"><div class="stars"><svg viewBox="0 0 24 24" width="10" height="10" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" width="10" height="10" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" width="10" height="10" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" width="10" height="10" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" width="10" height="10" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><span style="font-size:11px;font-weight:700;color:var(--text);">4.3</span><span style="font-size:11px;color:var(--text3);">(47)</span>
-            <button onclick="openProfile('BM','Berries Morelos','Cuernavaca, Morelos','Agricultura','4.3','47')" style="flex:1;padding:7px;border-radius:8px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);margin-left:auto;">Ver perfil</button>
-          </div>
-        </div>
-      </div>
-      <div style="height:16px;"></div>
     </div>
   </div>
-
-  <!-- ══════════════════════════════════════ -->
-  <!-- TODAS LAS SOLICITUDES (proveedor)     -->
-  <!-- ══════════════════════════════════════ -->
-  <div class="screen" id="s-all-requests">
-    <div class="sb"><span class="time">9:41</span></div>
-    <div class="topbar">
-      <button class="back-btn" onclick="go('s-all-requests','s-prov-home')"><svg class="ico" viewBox="0 0 24 24" width="18" height="18"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Volver</button>
-      <span class="topbar-title">Solicitudes</span>
-    </div>
-    <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0;">
-      <button id="arq-tab-new" onclick="switchReqTab('new')" style="flex:1;padding:10px 0;background:none;border:none;border-bottom:2px solid var(--org);cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;color:var(--org);">Nuevas <span style="background:var(--org);color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;margin-left:3px;">2</span></button>
-      <button id="arq-tab-pend" onclick="switchReqTab('pend')" style="flex:1;padding:10px 0;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;color:var(--text3);">Pendientes</button>
-      <button id="arq-tab-done" onclick="switchReqTab('done')" style="flex:1;padding:10px 0;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;color:var(--text3);">Respondidas</button>
-    </div>
-    <div class="scroll pad" style="padding-top:12px;">
-      <div id="arq-pane-new">
-        <div class="req-card">
-          <div class="req-top"><div class="req-av" style="background:var(--org-l);color:var(--org2);">MG</div><div style="flex:1;"><div class="req-name">Maria Gonzalez</div><div class="req-info">Tehuacan · Hace 15 min</div></div><span class="badge bo">Nueva</span></div>
-          <div class="req-msg">Necesito 200 kg de aguacate Hass. Tienen para esta semana?</div>
-          <div class="req-btns"><button class="btn btn-p btn-sm" style="flex:1;" onclick="go('s-all-requests','s-prov-chatconv')">Responder</button><button class="btn btn-g btn-sm" onclick="openProvBuyerProfile('MG','Maria Gonzalez','Tehuacan, Puebla')">Ver perfil</button></div>
-        </div>
-        <div class="req-card">
-          <div class="req-top"><div class="req-av" style="background:var(--gray-l);color:var(--text2);">CM</div><div style="flex:1;"><div class="req-name">Carlos Mendoza</div><div class="req-info">CDMX · Hace 2h</div></div><span class="badge bo">Nueva</span></div>
-          <div class="req-msg">Precio por 500 kg? Soy distribuidor, compro mensual.</div>
-          <div class="req-btns"><button class="btn btn-p btn-sm" style="flex:1;" onclick="go('s-all-requests','s-prov-chatconv')">Responder</button><button class="btn btn-g btn-sm" onclick="openProvBuyerProfile('CM','Carlos Mendoza','CDMX')">Ver perfil</button></div>
-        </div>
-      </div>
-      <div id="arq-pane-pend" style="display:none;">
-        <div class="req-card">
-          <div class="req-top"><div class="req-av" style="background:var(--gray-l);color:var(--text2);">LP</div><div style="flex:1;"><div class="req-name">Laura Pena</div><div class="req-info">Guadalajara · Ayer</div></div><span class="badge bgr">En espera</span></div>
-          <div class="req-msg">Buenos dias, busco proveedor de fresas para mi negocio.</div>
-          <div class="req-btns"><button class="btn btn-p btn-sm" style="flex:1;" onclick="go('s-all-requests','s-prov-chatconv')">Responder</button><button class="btn btn-g btn-sm">Ver perfil</button></div>
-        </div>
-      </div>
-      <div id="arq-pane-done" style="display:none;">
-        <div class="req-card" style="opacity:.7;">
-          <div class="req-top"><div class="req-av" style="background:var(--gray-l);color:var(--text2);">EO</div><div style="flex:1;"><div class="req-name">Elena Ortega</div><div class="req-info">Queretaro · Lunes</div></div><span class="badge bg">Respondida</span></div>
-          <div class="req-msg">Se busca proveedor de papaya. Minimo 100 kg.</div>
-          <div class="req-btns"><button class="btn btn-g btn-sm" style="flex:1;" onclick="go('s-all-requests','s-prov-chatconv')">Ver conversacion</button></div>
-        </div>
-      </div>
-      <div style="height:16px;"></div>
-    </div>
-  </div>
-
-  <!-- ══════════════════════════════════════ -->
-  <!-- ESTADO DEL PEDIDO + CALIFICACIÓN      -->
-  <!-- ══════════════════════════════════════ -->
-  <div class="screen" id="s-order">
-    <div class="sb"><span class="time">9:41</span></div>
-    <div class="topbar">
-      <button class="back-btn" onclick="goBack('s-order')"><svg class="ico" viewBox="0 0 24 24" width="18" height="18"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Volver</button>
-      <span class="topbar-title">Estado del pedido</span>
-    </div>
-    <div class="scroll pad" style="padding-top:12px;">
-      <!-- Proveedor card -->
-      <div style="display:flex;align-items:center;gap:12px;border:1px solid var(--border);border-radius:13px;padding:13px 14px;margin-bottom:16px;">
-        <div style="width:48px;height:48px;border-radius:13px;background:var(--org-l);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:var(--org);flex-shrink:0;">RF</div>
-        <div style="flex:1;"><div style="font-size:14px;font-weight:700;color:var(--text);">Rancho El Fresno</div><div style="font-size:12px;color:var(--text3);">Michoacan · Agricultura</div></div>
-        <button onclick="go('s-order','s-buyer-chatconv')" style="background:var(--org-l);border:none;border-radius:8px;padding:7px 12px;font-family:inherit;font-size:11px;font-weight:700;color:var(--org);cursor:pointer;">Mensaje</button>
-      </div>
-      <!-- Detalle del pedido -->
-      <div style="border:1px solid var(--border);border-radius:13px;padding:13px 14px;margin-bottom:16px;">
-        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Detalle del pedido</div>
-        <div style="font-size:13px;color:var(--text2);line-height:1.9;">Aguacate Hass · 200 kg<br>Precio: $28/kg · Envio: Incluido<br><span style="font-size:14px;font-weight:800;color:var(--text);">Total: $5,600 MXN</span></div>
-      </div>
-      <!-- Timeline de estado -->
-      <div style="border:1px solid var(--border);border-radius:13px;padding:13px 14px;margin-bottom:16px;">
-        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">Estado del envio</div>
-        <div id="order-timeline">
-          <div class="order-step done"><div class="os-dot done"></div><div class="os-body"><div class="os-title">Pedido confirmado</div><div class="os-time">Hoy 9:25</div></div></div>
-          <div class="order-step done"><div class="os-dot done"></div><div class="os-body"><div class="os-title">Preparando tu pedido</div><div class="os-time">Hoy 10:00</div></div></div>
-          <div class="order-step active"><div class="os-dot active"></div><div class="os-body"><div class="os-title" style="color:var(--org);">En camino a Tehuacan</div><div class="os-time">Estimado: hoy 15:00</div></div></div>
-          <div class="order-step"><div class="os-dot"></div><div class="os-body"><div class="os-title" style="color:var(--text3);">Entregado</div><div class="os-time" style="color:var(--text3);">Pendiente</div></div></div>
-        </div>
-      </div>
-      <!-- Acciones -->
-      <button onclick="confirmDelivery()" class="btn btn-p" style="margin-bottom:10px;">
-        <svg class="ico" viewBox="0 0 24 24" width="16" height="16" style="color:#fff"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        Confirmar entrega recibida
-      </button>
-      <button onclick="goBack('s-order')" class="btn btn-g">Reportar problema</button>
-      <div style="height:16px;"></div>
-    </div>
   </div>
 
 
@@ -3914,33 +3786,42 @@ function connectSocket() {
   });
 
   // Comprador recibe notificación cuando el proveedor acepta
-  socket.on('solicitud_aceptada', ({ chat_id, proveedor_nombre, mensaje }) => {
-    // Badge de notificación
+  socket.on('solicitud_aceptada', ({ chat_id, proveedor_nombre }) => {
+    if (document.getElementById('notif-aceptada-' + chat_id)) return;
     const badge = document.getElementById('notif-badge');
     if (badge) badge.style.display = 'block';
-
-    // Toast con opción de abrir chat
-    showToast('✓ ' + (proveedor_nombre || 'El proveedor') + ' aceptó tu solicitud');
-
-    // Agregar notificación visible en pantalla de notificaciones
+    showToast('\u2713 ' + (proveedor_nombre||'El proveedor') + ' aceptó tu solicitud');
     const notifList = document.getElementById('buyer-notif-list') || document.querySelector('#s-notif .scroll');
     if (notifList) {
       const div = document.createElement('div');
+      div.id = 'notif-aceptada-' + chat_id;
       div.className = 'notif-item unread';
       div.style.cssText = 'padding:14px;border-bottom:1px solid var(--border);cursor:pointer;';
       div.innerHTML = '<div style="display:flex;gap:10px;align-items:flex-start;">'
         + '<div style="width:36px;height:36px;border-radius:99px;background:var(--org-l);display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
         + '<svg class="ico" viewBox="0 0 24 24" width="16" height="16" style="color:var(--org)"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>'
-        + '<div><div style="font-size:13px;font-weight:700;color:var(--text);">¡Solicitud aceptada!</div>'
-        + '<div style="font-size:12px;color:var(--text2);">' + mensaje + '</div>'
+        + '<div><div style="font-size:13px;font-weight:700;color:var(--text);">\u00a1Solicitud aceptada!</div>'
+        + '<div style="font-size:12px;color:var(--text2);">' + (proveedor_nombre||'El proveedor') + ' aceptó tu solicitud. Ya puedes enviarle mensajes.</div>'
         + '<div style="font-size:11px;color:var(--text3);margin-top:3px;">Ahora</div></div></div>';
       div.onclick = () => { _currentChatId = chat_id; go('s-notif', 's-buyer-chatconv'); };
       notifList.insertBefore(div, notifList.firstChild);
     }
-
-    // Habilitar el chat — cambiar botón de "Solicitud enviada" a "Mensaje"
-    window._chatsAceptados = window._chatsAceptados || {};
-    window._chatsAceptados[chat_id] = true;
+    const chatPane = document.getElementById('chat-pane-ct');
+    if (chatPane && !document.getElementById('chat-real-' + chat_id)) {
+      const initials = (proveedor_nombre||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      const item = document.createElement('div');
+      item.className = 'chat-item'; item.id = 'chat-real-' + chat_id;
+      item.innerHTML = '<div class="ch-av" style="background:var(--org-l);color:var(--org);">' + initials + '</div>'
+        + '<div style="flex:1;min-width:0;"><div class="chat-name">' + (proveedor_nombre||'Proveedor') + '</div>'
+        + '<div class="chat-prev">Iniciar conversaci\u00f3n</div></div>';
+      item.onclick = () => { _currentChatId = chat_id;
+        const chAv = document.querySelector('#s-buyer-chatconv .ch-av');
+        const chName = document.querySelector('#s-buyer-chatconv .ch-name');
+        if (chAv) chAv.textContent = initials; if (chName) chName.textContent = proveedor_nombre||'Proveedor';
+        go('s-buyer-chat', 's-buyer-chatconv'); openChat(chat_id, proveedor_nombre, initials); };
+      chatPane.insertBefore(item, chatPane.firstChild);
+    }
+    window._chatsAceptados = window._chatsAceptados || {}; window._chatsAceptados[chat_id] = true;
   });
 
   // Proveedor recibe notificación de nueva solicitud en tiempo real
@@ -4256,16 +4137,57 @@ function markAllRead() {
 }
 
 // ─── Save/unsave provider ───
-function toggleSave(btnId) {
-  const btn = document.getElementById(btnId);
+async function toggleSave(btnId) {
+  const btn   = document.getElementById(btnId);
   const iconId = btnId.replace('btn','icon');
-  const icon = document.getElementById(iconId);
+  const icon  = document.getElementById(iconId);
   const saved = btn.dataset.saved === '1';
-  btn.dataset.saved = saved ? '0' : '1';
-  if (icon) icon.style.fill = saved ? 'none' : 'var(--org)';
-  if (icon) icon.style.stroke = saved ? '' : 'var(--org)';
-  const msg = saved ? 'Eliminado de guardados' : 'Guardado exitosamente';
-  showToast(msg);
+  const token = localStorage.getItem('ven_ya_token');
+  const provId = window._currentProveedorId;
+  if (!provId || !token) { showToast('Inicia sesión primero'); return; }
+  try {
+    if (saved) {
+      await apiCall('POST', '/usuarios/guardados/' + provId, {}, token);
+      btn.dataset.saved = '0';
+      if (icon) { icon.style.fill = 'none'; icon.style.stroke = ''; }
+      showToast('Eliminado de guardados');
+      const card = document.getElementById('saved-' + provId);
+      if (card) card.remove();
+      updateSavedEmpty();
+    } else {
+      await apiCall('POST', '/usuarios/guardados/' + provId, {}, token);
+      btn.dataset.saved = '1';
+      if (icon) { icon.style.fill = 'var(--org)'; icon.style.stroke = 'var(--org)'; }
+      showToast('Guardado en tu lista');
+      agregarProveedorGuardado(provId, window._currentProveedorNombre || 'Proveedor');
+    }
+  } catch(e) { showToast('Error al guardar'); }
+}
+
+function updateSavedEmpty() {
+  const list = document.getElementById('saved-list-content');
+  if (!list) return;
+  const items = list.querySelectorAll('[id^="saved-"]');
+  if (items.length === 0) {
+    if (!list.querySelector('.saved-empty')) {
+      list.innerHTML = '<div class="saved-empty" style="text-align:center;padding:48px 20px;color:var(--text3);"><div style="font-size:14px;font-weight:700;margin-bottom:6px;">Sin proveedores guardados</div><div style="font-size:12px;">Cuando guardes un proveedor aparecerá aquí</div></div>';
+    }
+  }
+}
+
+function agregarProveedorGuardado(provId, nombre) {
+  const list = document.getElementById('saved-list-content');
+  if (!list || document.getElementById('saved-' + provId)) return;
+  const empty = list.querySelector('.saved-empty');
+  if (empty) empty.remove();
+  const initials = nombre.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  const div = document.createElement('div');
+  div.id = 'saved-' + provId;
+  div.style.cssText = 'border:1px solid var(--border);border-radius:13px;padding:13px;margin-bottom:10px;display:flex;align-items:center;gap:12px;';
+  div.innerHTML = '<div style="width:44px;height:44px;border-radius:99px;background:var(--org-l);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--org);flex-shrink:0;">'+initials+'</div>'
+    + '<div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:700;color:var(--text);">'+nombre+'</div></div>'
+    + '<button onclick="verPerfilReal(this.dataset.id)" data-id=\''+provId+'\' style="padding:7px 12px;border-radius:9px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);">Ver perfil</button>';
+  list.insertBefore(div, list.firstChild);
 }
 
 // ─── All requests tabs ───
