@@ -5440,22 +5440,25 @@ async function buscarConFiltros() {
     }
 
     listEl.innerHTML = proveedores.map(p => {
-      const initials = (p.nombre||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-      const stars    = p.calificacion > 0 ? '★'.repeat(Math.round(p.calificacion)) + ' ' + Number(p.calificacion).toFixed(1) + ' (' + p.total_resenas + ')' : 'Nuevo';
-      const dist     = p.distancia_km ? ' · ' + p.distancia_km + ' km' : '';
-      const planBadge = p.plan !== 'gratuito' ? '<span style="font-size:9px;font-weight:700;background:var(--org-l);color:var(--org2);padding:2px 6px;border-radius:4px;margin-left:4px;">' + p.plan.toUpperCase() + '</span>' : '';
-      return '<div class="pcard" style="border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;">' +
-        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">' +
-        '<div style="width:48px;height:48px;border-radius:13px;background:var(--org-l);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:var(--org);flex-shrink:0;">' +
-        (p.foto_url ? '<img src="'+p.foto_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">' : initials) + '</div>' +
-        '<div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:700;color:var(--text);">' + (p.nombre||'Proveedor') + planBadge + '</div>' +
-        '<div style="font-size:11px;color:var(--text3);">' + (p.estado||'') + (p.municipio?', '+p.municipio:'') + dist + '</div></div></div>' +
-        (p.bio ? '<div style="font-size:12px;color:var(--text2);margin-bottom:8px;line-height:1.5;">' + p.bio.substring(0,80) + (p.bio.length>80?'...':'') + '</div>' : '') +
-        '<div style="font-size:11px;color:var(--org2);margin-bottom:10px;">' + stars + '</div>' +
-        '<div style="display:flex;gap:8px;">' +
-        '<button onclick="verPerfilReal(\''+p.id+'\')" style="flex:1;padding:8px;border-radius:9px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);">Ver perfil</button>' +
-        '<button onclick="conectarConProveedor(\''+p.id+'\',\''+(p.nombre||'').replace(/'/g,'')+'\''+')" style="flex:1;padding:8px;border-radius:9px;border:none;background:var(--org);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;color:#fff;">Conectar</button>' +
-        '</div></div>';
+      const initials   = (p.nombre||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      const stars      = p.calificacion > 0 ? '\u2605'.repeat(Math.round(p.calificacion)) + ' ' + Number(p.calificacion).toFixed(1) + ' (' + p.total_resenas + ')' : 'Nuevo';
+      const dist       = p.distancia_km ? ' · ' + p.distancia_km + ' km' : '';
+      const planBadge  = p.plan !== 'gratuito' ? ' <span style="font-size:9px;font-weight:700;background:var(--org-l);color:var(--org2);padding:2px 6px;border-radius:4px;">' + p.plan.toUpperCase() + '</span>' : '';
+      const foto       = p.foto_url ? '<img src="'+p.foto_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">' : initials;
+      const nSafe      = (p.nombre||'Proveedor').replace(/['"]/g,'');
+      return '<div style="border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;background:#fff;">'
+        + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">'
+        + '<div style="width:52px;height:52px;min-width:52px;border-radius:13px;background:var(--org-l);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:var(--org);overflow:hidden;">' + foto + '</div>'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-size:14px;font-weight:700;color:var(--text);">' + (p.nombre||'Proveedor') + planBadge + '</div>'
+        + '<div style="font-size:11px;color:var(--text3);margin-top:2px;">' + (p.estado||'') + (p.municipio?', '+p.municipio:'') + dist + '</div>'
+        + '<div style="font-size:11px;color:var(--org2);margin-top:3px;">' + stars + '</div>'
+        + '</div></div>'
+        + (p.bio ? '<div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6;">' + p.bio.substring(0,100) + (p.bio.length>100?'...':'') + '</div>' : '')
+        + '<div style="display:flex;gap:8px;">'
+        + '<button onclick="verPerfilReal(\'' + p.id + '\')" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:var(--text);">Ver perfil</button>'
+        + '<button onclick="conectarConProveedor(\'' + p.id + '\',\'' + nSafe + '\')" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--org);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#fff;">Conectar</button>'
+        + '</div></div>';
     }).join('');
 
     // Mostrar punto de filtro activo
