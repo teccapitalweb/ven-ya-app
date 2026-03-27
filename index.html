@@ -3499,16 +3499,60 @@ function switchRole(toRole) {
   showToast('Cambiado a modo Proveedor');
 }
 
+// ── ESTADOS Y MUNICIPIOS DE MÉXICO ──────────────────────
+const ESTADOS_MX = ['Aguascalientes','Baja California','Baja California Sur','Campeche','Chiapas','Chihuahua','Ciudad de México','Coahuila','Colima','Durango','Estado de México','Guanajuato','Guerrero','Hidalgo','Jalisco','Michoacán','Morelos','Nayarit','Nuevo León','Oaxaca','Puebla','Querétaro','Quintana Roo','San Luis Potosí','Sinaloa','Sonora','Tabasco','Tamaulipas','Tlaxcala','Veracruz','Yucatán','Zacatecas'];
+
+const MUNICIPIOS_MX = {
+  'Aguascalientes':['Aguascalientes','Asientos','Calvillo','Cosío','El Llano','Jesús María','Pabellón de Arteaga','Rincón de Romos','San Francisco de los Romo','San José de Gracia','Tepezalá'],
+  'Baja California':['Ensenada','Mexicali','Playas de Rosarito','Tecate','Tijuana'],
+  'Baja California Sur':['Comondú','La Paz','Loreto','Los Cabos','Mulegé'],
+  'Campeche':['Calkiní','Campeche','Carmen','Champotón','Escárcega','Hecelchakán','Hopelchén','Palizada','Tenabo'],
+  'Chiapas':['Comitán de Domínguez','Ocosingo','San Cristóbal de las Casas','Tapachula','Tonalá','Tuxtla Chico','Tuxtla Gutiérrez','Villaflores'],
+  'Chihuahua':['Chihuahua','Ciudad Juárez','Cuauhtémoc','Delicias','Hidalgo del Parral','Ojinaga'],
+  'Ciudad de México':['Álvaro Obregón','Azcapotzalco','Benito Juárez','Coyoacán','Cuajimalpa','Cuauhtémoc','Gustavo A. Madero','Iztacalco','Iztapalapa','La Magdalena Contreras','Miguel Hidalgo','Milpa Alta','Tláhuac','Tlalpan','Venustiano Carranza','Xochimilco'],
+  'Coahuila':['Monclova','Piedras Negras','Saltillo','Torreón'],
+  'Colima':['Armería','Colima','Comala','Coquimatlán','Cuauhtémoc','Ixtlahuacán','Manzanillo','Minatitlán','Tecomán','Villa de Álvarez'],
+  'Durango':['Canatlán','Durango','Gómez Palacio','Lerdo','Pueblo Nuevo','Tamazula'],
+  'Estado de México':['Atlacomulco','Ecatepec de Morelos','Metepec','Naucalpan de Juárez','Nezahualcóyotl','Texcoco','Tlalnepantla de Baz','Toluca','Tultitlán','Valle de Chalco Solidaridad'],
+  'Guanajuato':['Celaya','Guanajuato','Irapuato','León','Salamanca','San Francisco del Rincón','San Miguel de Allende','Silao'],
+  'Guerrero':['Acapulco de Juárez','Chilpancingo de los Bravo','Iguala de la Independencia','Taxco de Alarcón','Zihuatanejo de Azueta'],
+  'Hidalgo':['Huejutla de Reyes','Pachuca de Soto','Tizayuca','Tula de Allende','Tulancingo de Bravo'],
+  'Jalisco':['Guadalajara','Lagos de Moreno','Puerto Vallarta','San Pedro Tlaquepaque','Tepatitlán de Morelos','Tlajomulco de Zúñiga','Tlaquepaque','Tonalá','Zapopan','Zapotlanejo'],
+  'Michoacán':['Hidalgo','Lázaro Cárdenas','Morelia','Pátzcuaro','Uruapan','Zamora','Zitácuaro'],
+  'Morelos':['Cuernavaca','Cuautla','Jiutepec','Temixco','Yautepec de Zaragoza'],
+  'Nayarit':['Bahía de Banderas','Compostela','Santiago Ixcuintla','Tepic','Xalisco'],
+  'Nuevo León':['Apodaca','Escobedo','García','Guadalupe','Juárez','Monterrey','San Nicolás de los Garza','San Pedro Garza García','Santa Catarina'],
+  'Oaxaca':['Huajuapan de León','Juchitán de Zaragoza','Oaxaca de Juárez','Puerto Escondido','Salina Cruz','San Juan Bautista Tuxtepec'],
+  'Puebla':['Atlixco','Cholula','Izúcar de Matamoros','Puebla','San Martín Texmelucan','San Pedro Cholula','Tehuacán','Teziutlán','Xicotepec'],
+  'Querétaro':['Amealco de Bonfil','Cadereyta de Montes','El Marqués','Ezequiel Montes','Jalpan de Serra','Pedro Escobedo','Querétaro','San Juan del Río','Tequisquiapan'],
+  'Quintana Roo':['Bacalar','Benito Juárez','Cozumel','Felipe Carrillo Puerto','Isla Mujeres','Lázaro Cárdenas','Othón P. Blanco','Puerto Morelos','Solidaridad','Tulum'],
+  'San Luis Potosí':['Ciudad Valles','Matehuala','Rioverde','San Luis Potosí','Soledad de Graciano Sánchez'],
+  'Sinaloa':['Ahome','Culiacán','Guasave','Mazatlán','Navolato'],
+  'Sonora':['Cajeme','Guaymas','Hermosillo','Navojoa','Nogales'],
+  'Tabasco':['Cárdenas','Centro','Comalcalco','Huimanguillo','Macuspana','Paraíso'],
+  'Tamaulipas':['Altamira','Ciudad Madero','Matamoros','Nuevo Laredo','Reynosa','Tampico','Victoria'],
+  'Tlaxcala':['Apizaco','Chiautempan','Huamantla','Tlaxcala','Zacatelco'],
+  'Veracruz':['Boca del Río','Coatzacoalcos','Córdoba','Martínez de la Torre','Minatitlán','Orizaba','Poza Rica de Hidalgo','Tuxpan','Veracruz','Xalapa'],
+  'Yucatán':['Kanasín','Mérida','Progreso','Tekax','Ticul','Tizimín','Umán','Valladolid'],
+  'Zacatecas':['Calera','Fresnillo','Guadalupe','Jerez de García Salinas','Loreto','Zacatecas'],
+};
+
 function showProvSetupModal() {
   var phone = document.querySelector('.phone');
   if (!phone) return;
+
   var CATS = ['Frutas y verduras','Animales y ganadería','Ropa y moda','Electrónicos','Artesanías','Agro e insumos','Servicios y oficios','Alimentos preparados','Muebles','Belleza','Construcción','Salud','Educación','Otros'];
   var catOptions = CATS.map(function(c){ return '<option>'+c+'</option>'; }).join('');
+
   var modal = document.createElement('div');
   modal.id = 'prov-setup-modal';
   modal.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:80;display:flex;align-items:flex-end;justify-content:center;overflow-y:auto;';
   var inner = document.createElement('div');
   inner.style.cssText = 'background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-height:90vh;overflow-y:auto;';
+
+  // Opciones de estados
+  var estadoOptions = ESTADOS_MX.map(e => '<option value="'+e+'">'+e+'</option>').join('');
+
   inner.innerHTML =
     '<div style="width:36px;height:4px;background:var(--border);border-radius:99px;margin:0 auto 20px;"></div>'+
     '<div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px;">Activar perfil de Proveedor</div>'+
@@ -3516,13 +3560,27 @@ function showProvSetupModal() {
     '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:5px;">NOMBRE DEL NEGOCIO *</div><input id="setup-biz-name" class="inp" placeholder="Ej. Rancho Los Pinos"></div>'+
     '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:5px;">QUÉ VENDES *</div><select id="setup-category" class="inp">'+catOptions+'</select></div>'+
     '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:5px;">TELÉFONO DE CONTACTO *</div><input id="setup-phone" class="inp" type="tel" placeholder="2381234567"></div>'+
-    '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:5px;">ESTADO *</div><input id="setup-state" class="inp" placeholder="Ej. Puebla"></div>'+
-    '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:5px;">MUNICIPIO *</div><input id="setup-city" class="inp" placeholder="Ej. Tehuacán"></div>'+
+    '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:5px;">ESTADO *</div><select id="setup-state" class="inp" onchange="actualizarMunicipiosSetup()"><option value="">Selecciona tu estado</option>'+estadoOptions+'</select></div>'+
+    '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:5px;">MUNICIPIO *</div><select id="setup-city" class="inp"><option value="">Primero selecciona el estado</option></select></div>'+
     '<div style="margin-bottom:20px;"><div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:5px;">TIPO DE VENTA *</div><select id="setup-tipoventa" class="inp"><option value="ambos">Mayoreo y menudeo</option><option value="mayoreo">Solo mayoreo</option><option value="menudeo">Solo menudeo</option></select></div>'+
     '<button id="setup-confirm-btn" onclick="confirmProvSetup()" class="btn btn-p" style="width:100%;margin-bottom:10px;">Activar como Proveedor</button>'+
     '<button onclick="document.getElementById(\'prov-setup-modal\').remove()" style="width:100%;padding:12px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--text3);cursor:pointer;">Cancelar</button>';
+
   modal.appendChild(inner);
   phone.appendChild(modal);
+}
+
+function actualizarMunicipiosSetup() {
+  const estado = document.getElementById('setup-state')?.value;
+  const cityEl = document.getElementById('setup-city');
+  if (!cityEl) return;
+  const munis = MUNICIPIOS_MX[estado] || [];
+  if (!munis.length) {
+    cityEl.innerHTML = '<option value="">Sin municipios disponibles</option>';
+    return;
+  }
+  cityEl.innerHTML = '<option value="">Selecciona municipio</option>' +
+    munis.map(m => '<option value="'+m+'">'+m+'</option>').join('');
 }
 
 async function confirmProvSetup() {
@@ -3532,6 +3590,7 @@ async function confirmProvSetup() {
   const estado_negocio    = document.getElementById('setup-state')?.value?.trim();
   const municipio_negocio = document.getElementById('setup-city')?.value?.trim();
   const tipo_venta        = document.getElementById('setup-tipoventa')?.value;
+
   if (!nombre_negocio || !estado_negocio || !municipio_negocio || !telefono) {
     showToast('Completa todos los campos obligatorios'); return;
   }
@@ -3539,34 +3598,51 @@ async function confirmProvSetup() {
   if (!token) { showToast('Inicia sesión primero'); return; }
   const btn = document.getElementById('setup-confirm-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Activando...'; }
+
   try {
-    const data = await apiCall('POST', '/usuarios/activar-proveedor', {
+    await apiCall('POST', '/usuarios/activar-proveedor', {
       nombre_negocio, categoria_negocio, telefono, estado_negocio, municipio_negocio, tipo_venta
     }, token);
-    if (window._currentUser) {
-      window._currentUser.rol = 'ambos';
-      window._currentUser.nombre_negocio = nombre_negocio;
-      window._currentUser.categoria_negocio = categoria_negocio;
-      window._currentUser.estado_negocio = estado_negocio;
-      window._currentUser.municipio_negocio = municipio_negocio;
-      window._currentUser.tipo_venta = tipo_venta;
-    }
+
+    // Actualizar datos en memoria
+    if (!window._currentUser) window._currentUser = {};
+    window._currentUser.rol               = 'ambos';
+    window._currentUser.nombre_negocio    = nombre_negocio;
+    window._currentUser.categoria_negocio = categoria_negocio;
+    window._currentUser.estado_negocio    = estado_negocio;
+    window._currentUser.municipio_negocio = municipio_negocio;
+    window._currentUser.tipo_venta        = tipo_venta;
     window._user.bizName = nombre_negocio;
+
+    // Reflejar en pantalla perfil proveedor
+    const provName = document.getElementById('prov-myprofile-name');
+    const provLoc  = document.getElementById('prov-myprofile-loc');
+    if (provName) provName.textContent = nombre_negocio;
+    if (provLoc)  provLoc.textContent  = municipio_negocio + ', ' + estado_negocio;
+
+    // Rellenar formulario editar perfil proveedor
+    const provBizName = document.getElementById('prov-edit-bizname');
+    const provState   = document.getElementById('prov-edit-state');
+    const provCity    = document.getElementById('prov-edit-city');
+    if (provBizName) provBizName.value = nombre_negocio;
+    if (provState)   provState.value   = estado_negocio;
+    if (provCity)    provCity.value    = municipio_negocio;
+
     window._provProfileActivated = true;
     const modal = document.getElementById('prov-setup-modal');
     if (modal) modal.remove();
+
     currentMode = 'prov';
     document.getElementById('btn-buyer').classList.remove('active');
     document.getElementById('btn-prov').classList.add('active');
     hideAll();
     document.getElementById('s-prov-home').classList.add('active');
     syncProfiles();
-    showToast('¡Perfil de Proveedor activado!');
+    showToast('¡Perfil de Proveedor activado! Ya apareces en búsquedas.');
   } catch(e) {
     showToast('Error: ' + (e.message || 'intenta de nuevo'));
     if (btn) { btn.disabled = false; btn.textContent = 'Activar como Proveedor'; }
   }
-
 }
 
 function hideAll() {
@@ -5627,47 +5703,41 @@ async function verPerfilReal(userId) {
   const token = localStorage.getItem('ven_ya_token');
   if (!token) return;
   try {
-    const user     = await apiCall('GET', '/usuarios/' + userId, null, token);
-    const initials = (user.nombre||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-    const loc      = [user.municipio, user.estado].filter(Boolean).join(', ');
+    const user = await apiCall('GET', '/usuarios/' + userId, null, token);
+    const nombre    = user.nombre_negocio    || user.nombre    || 'Proveedor';
+    const bio       = user.bio_negocio       || user.bio       || 'Proveedor registrado en \u00a1Ven Ya!';
+    const estado    = user.estado_negocio    || user.estado    || '';
+    const municipio = user.municipio_negocio || user.municipio || '';
+    const initials  = nombre.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    const loc       = [municipio, estado].filter(Boolean).join(', ');
 
-    // Avatar
     const avEl = document.querySelector('#s-prov-profile .av-lg');
-    if (avEl) avEl.textContent = initials;
-
-    // Nombre
+    if (avEl) {
+      if (user.foto_negocio || user.foto_url) {
+        avEl.innerHTML = '<img src="'+(user.foto_negocio||user.foto_url)+'" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">';
+      } else { avEl.textContent = initials; }
+    }
     const nameEl = document.querySelector('#s-prov-profile .pname-lg');
-    if (nameEl) nameEl.textContent = user.nombre || 'Proveedor';
+    if (nameEl) nameEl.textContent = nombre;
 
-    // Ubicación
     const locEl = document.querySelector('#s-prov-profile .ploc-lg');
     if (locEl) locEl.innerHTML = '<svg class="ico" viewBox="0 0 24 24" width="11" height="11"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' + loc;
 
-    // Descripción/bio
     const descEl = document.querySelector('#s-prov-profile .pad > p');
-    if (descEl) descEl.textContent = user.bio || 'Proveedor registrado en ¡Ven Ya!';
+    if (descEl) descEl.textContent = bio;
 
-    // Calificación y reseñas
     const stats = document.querySelectorAll('#s-prov-profile .pstat .n');
     if (stats[0]) stats[0].textContent = user.calificacion ? Number(user.calificacion).toFixed(1) : '0.0';
     if (stats[1]) stats[1].textContent = user.total_resenas || '0';
 
-    // Botón "Enviar mensaje" → conectar con este proveedor
     const msgBtn = document.querySelector('#s-prov-profile .btn-p');
-    if (msgBtn) msgBtn.onclick = () => conectarConProveedor(userId, user.nombre || 'Proveedor');
+    if (msgBtn) msgBtn.onclick = () => enviarSolicitud(userId, nombre);
 
-    // Guardar pantalla de origen para el botón volver
-    window._provProfileFrom = 's-search-results';
-
-    // Actualizar botón volver
     const backBtn = document.querySelector('#s-prov-profile .back-btn');
     if (backBtn) backBtn.onclick = () => go('s-prov-profile', 's-search-results');
 
-    // Navegar al perfil
     go('s-search-results', 's-prov-profile');
-  } catch(e) {
-    showToast('Error al cargar perfil');
-  }
+  } catch(e) { showToast('Error al cargar perfil'); }
 }
 
 function verPerfilReal2(i) {
