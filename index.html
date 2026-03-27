@@ -86,8 +86,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (active && (active.id === "s-splash" || active.id === "s-auth")) {
       if (typeof goToHome === "function") {
         goToHome();
-        // Cargar foto DESPUÉS de navegar al home
-        if (user.foto_url) setTimeout(() => loadUserPhoto(user.foto_url), 500);
+    // Cargar foto si existe
+    if (user.foto_url) setTimeout(() => loadUserPhoto(user.foto_url), 500);
+    // Cargar portada si existe
+    if (user.portada_url) setTimeout(() => {
+      const coverImg = document.getElementById('prov-cover-img');
+      if (coverImg) { coverImg.src = user.portada_url; coverImg.style.display = 'block'; }
+    }, 500);
       }
     } else {
       // Ya estamos en home, cargar foto directo
@@ -5019,11 +5024,11 @@ function previewCover(input) {
     if (img) { img.src = e.target.result; img.style.display = 'block'; }
   };
   reader.readAsDataURL(file);
-  // Subir a Cloudinary y guardar en BD
+  // Subir a Cloudinary como portada (campo separado de foto_url)
   uploadPhoto(file, 'portadas').then(async url => {
     const token = localStorage.getItem('ven_ya_token');
     if (token) {
-      await apiCall('PUT', '/usuarios/perfil', { foto_url: url }, token);
+      await apiCall('PUT', '/usuarios/perfil', { portada_url: url }, token);
       showToast('Portada actualizada');
     }
   }).catch(() => showToast('Error al subir portada'));
