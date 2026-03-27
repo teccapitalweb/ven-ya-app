@@ -2205,7 +2205,7 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#DDDCDB;min
       <!-- TIPO DE VENTA -->
       <div style="margin-bottom:22px;">
         <div style="font-size:12px;font-weight:800;color:var(--text);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Tipo de venta</div>
-        <div style="display:flex;gap:7px;">
+        <div id="filter-venta" style="display:flex;gap:7px;">
           <div class="chip on" onclick="filterChip(this)">Ambos</div>
           <div class="chip" onclick="filterChip(this)">Mayoreo</div>
           <div class="chip" onclick="filterChip(this)">Menudeo</div>
@@ -5358,13 +5358,113 @@ function toggleTog(id) {
 }
 
 function applyFilters() {
-  document.getElementById('filter-dot').style.display = 'block';
+  // Leer todos los filtros activos
+  const filtros = {};
+
+  // Categoría
+  const catChip = document.querySelector('#filter-cats .chip.on');
+  if (catChip && catChip.textContent !== 'Todos') {
+    filtros.categoria = catChip.textContent.trim();
+  }
+
+  // Ubicación
+  const locChip = document.querySelector('#filter-loc .chip.on');
+  if (locChip) {
+    const loc = locChip.textContent.trim();
+    if (loc === 'En mi estado') {
+      const user = window._currentUser;
+      if (user?.estado) filtros.estado = user.estado;
+    } else if (loc === 'Cerca de mí') {
+      const km = document.getElementById('dist-label')?.textContent?.replace(' km','') || '50';
+      filtros.km = km;
+      filtros.usarGPS = true;
+    } else if (loc === 'Solo online') {
+      filtros.solo_online = true;
+    }
+  }
+
+  // Tipo de venta
+  const ventaChip = document.querySelector('#filter-venta .chip.on');
+  if (ventaChip && ventaChip.textContent !== 'Ambos') {
+    filtros.tipo_venta = ventaChip.textContent.trim().toLowerCase();
+  }
+
+  // Plan verificado
+  const togVerif = document.getElementById('tog-verified');
+  if (togVerif?.dataset.on === '1') filtros.plan = 'pro';
+
+  // Guardar filtros globalmente
+  window._filtrosActivos = filtros;
+
+  // Ir a resultados y buscar
   go('s-filters', 's-search-results');
-  const tag = document.createElement('div');
-  tag.style.cssText = 'padding:4px 10px;background:var(--org-l);color:var(--org2);border-radius:99px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap;';
-  tag.innerHTML = 'Solo 5★ · Verificados <span onclick="this.parentElement.remove()">✕</span>';
-  const af = document.getElementById('active-filters');
-  if (af && af.children.length === 0) af.appendChild(tag);
+  setTimeout(() => buscarConFiltros(), 200);
+}
+
+async function buscarConFiltros() {
+  const filtros = window._filtrosActivos || {};
+  const token   = localStorage.getItem('ven_ya_token');
+  const listEl  = document.getElementById('search-result-list');
+  const countEl = document.getElementById('result-count');
+  if (!listEl) return;
+
+  listEl.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px;">Buscando...</div>';
+
+  try {
+    let endpoint = '/usuarios/proveedores?limit=20';
+    if (filtros.categoria)  endpoint += '&categoria=' + encodeURIComponent(filtros.categoria);
+    if (filtros.estado)     endpoint += '&estado='    + encodeURIComponent(filtros.estado);
+    if (filtros.tipo_venta) endpoint += '&tipo_venta='+ encodeURIComponent(filtros.tipo_venta);
+    if (filtros.plan)       endpoint += '&plan='      + encodeURIComponent(filtros.plan);
+
+    // Geolocalización
+    if (filtros.usarGPS) {
+      try {
+        const pos = await new Promise((res, rej) =>
+          navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 })
+        );
+        endpoint += '&lat=' + pos.coords.latitude + '&lng=' + pos.coords.longitude + '&km=' + (filtros.km || 50);
+      } catch {
+        showToast('No se pudo obtener tu ubicación');
+      }
+    }
+
+    const data = await apiCall('GET', endpoint, null, token);
+    const proveedores = data.proveedores || [];
+
+    if (countEl) countEl.textContent = proveedores.length + ' resultado' + (proveedores.length !== 1 ? 's' : '') + ' para';
+
+    if (proveedores.length === 0) {
+      listEl.innerHTML = '<div style="text-align:center;padding:40px 20px;"><div style="font-size:32px;margin-bottom:12px;">🔍</div><div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;">Sin resultados</div><div style="font-size:13px;color:var(--text3);">Ajusta los filtros o intenta con otra búsqueda</div></div>';
+      return;
+    }
+
+    listEl.innerHTML = proveedores.map(p => {
+      const initials = (p.nombre||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      const stars    = p.calificacion > 0 ? '★'.repeat(Math.round(p.calificacion)) + ' ' + Number(p.calificacion).toFixed(1) + ' (' + p.total_resenas + ')' : 'Nuevo';
+      const dist     = p.distancia_km ? ' · ' + p.distancia_km + ' km' : '';
+      const planBadge = p.plan !== 'gratuito' ? '<span style="font-size:9px;font-weight:700;background:var(--org-l);color:var(--org2);padding:2px 6px;border-radius:4px;margin-left:4px;">' + p.plan.toUpperCase() + '</span>' : '';
+      return '<div class="pcard" style="border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;">' +
+        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">' +
+        '<div style="width:48px;height:48px;border-radius:13px;background:var(--org-l);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:var(--org);flex-shrink:0;">' +
+        (p.foto_url ? '<img src="'+p.foto_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">' : initials) + '</div>' +
+        '<div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:700;color:var(--text);">' + (p.nombre||'Proveedor') + planBadge + '</div>' +
+        '<div style="font-size:11px;color:var(--text3);">' + (p.estado||'') + (p.municipio?', '+p.municipio:'') + dist + '</div></div></div>' +
+        (p.bio ? '<div style="font-size:12px;color:var(--text2);margin-bottom:8px;line-height:1.5;">' + p.bio.substring(0,80) + (p.bio.length>80?'...':'') + '</div>' : '') +
+        '<div style="font-size:11px;color:var(--org2);margin-bottom:10px;">' + stars + '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+        '<button onclick="verPerfilReal(\''+p.id+'\')" style="flex:1;padding:8px;border-radius:9px;border:1.5px solid var(--border);background:#fff;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;color:var(--text);">Ver perfil</button>' +
+        '<button onclick="conectarConProveedor(\''+p.id+'\',\''+(p.nombre||'').replace(/'/g,'')+'\''+')" style="flex:1;padding:8px;border-radius:9px;border:none;background:var(--org);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;color:#fff;">Conectar</button>' +
+        '</div></div>';
+    }).join('');
+
+    // Mostrar punto de filtro activo
+    const dot = document.getElementById('filter-dot');
+    if (dot) dot.style.display = 'block';
+
+  } catch(e) {
+    listEl.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);">Error al buscar. Intenta de nuevo.</div>';
+  }
 }
 
 function clearFilters() {
